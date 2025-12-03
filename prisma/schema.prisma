@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String             @id @default(cuid())
+  name           String
+  email          String             @unique
+  phone          String?            @unique
+  password       String
+  role           Role               @default(student)
+  collegeId      String?
+  batch          String?
+  avatar         String?
+  banner         String?
+  verifiedStatus VerificationStatus @default(pending)
+  points         Int                @default(0)
+  createdAt      DateTime           @default(now())
+  comments       Comment[]
+  eventsRSVP     EventsOnUsers[]
+  likes          Like[]
+  posts          Post[]
+  college        College?           @relation(fields: [collegeId], references: [id])
+  verifications  Verification[]
+  clubs          Club[]             @relation("ClubMembers")
+}
+
+model College {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logo      String?
+  city      String?
+  website   String?
+  createdBy String?
+  createdAt DateTime @default(now())
+  clubs     Club[]
+  events    Event[]
+  users     User[]
+}
+
+model Verification {
+  id          String             @id @default(cuid())
+  userId      String
+  idCardImage String
+  faceImage   String
+  status      VerificationStatus @default(pending)
+  reviewedBy  String?
+  createdAt   DateTime           @default(now())
+  user        User               @relation(fields: [userId], references: [id])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  userId    String
+  caption   String?
+  image     String?
+  createdAt DateTime  @default(now())
+  comments  Comment[]
+  likes     Like[]
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Like {
+  id     String @id @default(cuid())
+  userId String
+  postId String
+  post   Post   @relation(fields: [postId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  text      String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Club {
+  id          String   @id @default(cuid())
+  collegeId   String
+  name        String
+  description String?
+  adminId     String?
+  createdAt   DateTime @default(now())
+  college     College  @relation(fields: [collegeId], references: [id])
+  members     User[]   @relation("ClubMembers")
+}
+
+model Event {
+  id          String          @id @default(cuid())
+  collegeId   String
+  title       String
+  description String?
+  date        DateTime
+  image       String?
+  createdAt   DateTime        @default(now())
+  college     College         @relation(fields: [collegeId], references: [id])
+  attendees   EventsOnUsers[]
+}
+
+model EventsOnUsers {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, eventId])
+}
+
+model Reward {
+  id             String   @id @default(cuid())
+  title          String
+  pointsRequired Int
+  image          String?
+  createdAt      DateTime @default(now())
+}
+
+model Coupon {
+  id        String    @id @default(cuid())
+  vendor    String
+  value     String
+  expiry    DateTime
+  qrCode    String
+  usedBy    String?
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+enum Role {
+  super_admin
+  college_admin
+  student
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
