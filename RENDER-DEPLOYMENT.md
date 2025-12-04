@@ -8,8 +8,9 @@
 - ✅ Added `typeRoots: ["./node_modules/@types"]` to tsconfig.json
 
 ### 2. Node Version Configuration
-- ✅ Added `engines.node: "18.x"` to package.json
-- This ensures Render uses Node 18 instead of Node 22 (which breaks TypeScript builds)
+- ✅ Added `engines.node: "20.x"` to package.json
+- Node 20.x is required for Prisma (20.19+) and works with TypeScript builds
+- Node 22.x can cause TypeScript build issues, so we use Node 20.x
 
 ### 3. TypeScript Configuration
 - ✅ `moduleResolution: "node"` - Already configured
@@ -75,7 +76,7 @@ After deployment, verify:
 
 ## 📝 Notes
 
-- Node 18.x is required (Node 22 breaks TypeScript compilation)
+- Node 20.x is required (Prisma requires 20.19+, and Node 22 can break TypeScript compilation)
 - Prisma Client must be generated before build
 - All environment variables must be set in Render dashboard
 - Build output goes to `dist/` folder
