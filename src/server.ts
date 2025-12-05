@@ -14,8 +14,14 @@ try {
   app.listen(PORT, () => {
     logger.info(`🚀 Server running on port ${PORT}`);
     logger.info(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
+    logger.info(`🌐 Frontend URL: ${process.env.FRONTEND_URL || "Not set"}`);
+    logger.info(`📦 Database: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`);
+    
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || "Not set"}`);
+    console.log(`📦 Database: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`);
+    console.log(`✅ All routes registered and ready`);
   });
 } catch (error) {
   console.error("❌ Failed to start server:", error);

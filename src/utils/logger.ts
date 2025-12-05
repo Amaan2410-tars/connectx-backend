@@ -2,10 +2,19 @@ import winston from "winston";
 import path from "path";
 import fs from "fs";
 
-// Create logs directory if it doesn't exist
+// Create logs directory if it doesn't exist (only in non-production or if directory is writable)
 const logsDir = path.join(process.cwd(), "logs");
-if (!fs.existsSync(logsDir)) {
-  fs.mkdirSync(logsDir, { recursive: true });
+const isProduction = process.env.NODE_ENV === "production";
+
+// Only create logs directory if we're not in production or if we can write to it
+if (!isProduction) {
+  if (!fs.existsSync(logsDir)) {
+    try {
+      fs.mkdirSync(logsDir, { recursive: true });
+    } catch (error) {
+      console.warn("Could not create logs directory:", error);
+    }
+  }
 }
 
 // Define log format
@@ -30,31 +39,42 @@ const consoleFormat = winston.format.combine(
 );
 
 // Create logger instance
+const transports: winston.transport[] = [];
+
+// Only add file transports if logs directory exists and is writable
+if (!isProduction && fs.existsSync(logsDir)) {
+  try {
+    transports.push(
+      // Write all logs to `combined.log`
+      new winston.transports.File({
+        filename: path.join(logsDir, "combined.log"),
+        maxsize: 5242880, // 5MB
+        maxFiles: 5,
+      }),
+      // Write all logs with level `error` and below to `error.log`
+      new winston.transports.File({
+        filename: path.join(logsDir, "error.log"),
+        level: "error",
+        maxsize: 5242880, // 5MB
+        maxFiles: 5,
+      })
+    );
+  } catch (error) {
+    console.warn("Could not set up file transports:", error);
+  }
+}
+
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: logFormat,
   defaultMeta: { service: "connectx-backend" },
-  transports: [
-    // Write all logs to `combined.log`
-    new winston.transports.File({
-      filename: path.join(logsDir, "combined.log"),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    // Write all logs with level `error` and below to `error.log`
-    new winston.transports.File({
-      filename: path.join(logsDir, "error.log"),
-      level: "error",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-  ],
-  exceptionHandlers: [
+  transports,
+  exceptionHandlers: isProduction ? [] : [
     new winston.transports.File({
       filename: path.join(logsDir, "exceptions.log"),
     }),
   ],
-  rejectionHandlers: [
+  rejectionHandlers: isProduction ? [] : [
     new winston.transports.File({
       filename: path.join(logsDir, "rejections.log"),
     }),
