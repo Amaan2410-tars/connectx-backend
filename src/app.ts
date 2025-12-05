@@ -15,6 +15,11 @@ import coinRoutes from "./routes/coins.routes";
 import premiumRoutes from "./routes/premium.routes";
 import legalRoutes from "./routes/legal.routes";
 import { premiumWebhookHandler } from "./controllers/premium.controller";
+// Direct controller imports for alternative route registration
+import { signup, login } from "./controllers/auth.controller";
+import { validate } from "./middleware/validate";
+import { signupSchema, loginSchema } from "./utils/validators/auth.validators";
+import { authLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
@@ -58,8 +63,15 @@ app.use(express.json());
 app.use(morganMiddleware);
 app.use(requestLogger);
 
+// DEBUG: Request logging middleware - logs ALL incoming requests
+app.use((req, res, next) => {
+  console.log(`🔍 [${req.method}] ${req.originalUrl} | Path: ${req.path} | IP: ${req.ip}`);
+  next();
+});
+
 // Rate limiting (applied to all routes)
-app.use("/api", apiLimiter);
+// Temporarily disabled for debugging - re-enable after fixing routes
+// app.use("/api", apiLimiter);
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -71,6 +83,24 @@ app.get("/", (req, res) => {
     status: "ConnectX Backend is Running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development"
+  });
+});
+
+// Simple test endpoint to verify routing works
+app.get("/test", (req, res) => {
+  res.json({ 
+    success: true,
+    message: "Test endpoint works!",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test API endpoint
+app.get("/api/test", (req, res) => {
+  res.json({ 
+    success: true,
+    message: "API routing works!",
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -103,8 +133,12 @@ if (process.env.NODE_ENV !== "production") {
 try {
   console.log("📦 Registering API routes...");
   
-  app.use("/api/auth", authRoutes);
-  console.log("✅ Registered: /api/auth");
+  // Register auth routes with explicit path logging
+  app.use("/api/auth", (req, res, next) => {
+    console.log(`🔵 Auth route matched: ${req.method} ${req.path}`);
+    next();
+  }, authRoutes);
+  console.log("✅ Registered: /api/auth -> routes: /signup, /login, /me");
   
   app.use("/api/admin", adminRoutes);
   console.log("✅ Registered: /api/admin");
@@ -132,11 +166,34 @@ try {
   app.post("/api/premium/webhook", premiumWebhookHandler);
   console.log("✅ Registered: /api/premium/webhook (POST)");
   
-  console.log("✅ All routes registered successfully");
+  // ALTERNATIVE: Direct route registration for auth (bypassing router)
+  // This ensures routes work even if router mounting fails
+  app.post("/api/auth/signup", authLimiter, validate(signupSchema), (req, res, next) => {
+    console.log("🔵 Direct signup route hit!");
+    signup(req, res, next);
+  });
+  console.log("✅ Direct route registered: POST /api/auth/signup");
+  
+  app.post("/api/auth/login", authLimiter, validate(loginSchema), (req, res, next) => {
+    console.log("🔵 Direct login route hit!");
+    login(req, res, next);
+  });
+  console.log("✅ Direct route registered: POST /api/auth/login");
+  
+  console.log("✅ All routes registered successfully (including direct routes)");
 } catch (error) {
   console.error("❌ Error registering routes:", error);
   throw error;
 }
+
+// DEBUG: Catch-all route to see what's being requested
+app.use((req, res, next) => {
+  console.log(`⚠️ No route matched for: ${req.method} ${req.originalUrl}`);
+  console.log(`   Path: ${req.path}`);
+  console.log(`   Base URL: ${req.baseUrl}`);
+  console.log(`   Route stack length: ${app._router?.stack?.length || 0}`);
+  next();
+});
 
 // 404 handler
 app.use(notFoundHandler);
