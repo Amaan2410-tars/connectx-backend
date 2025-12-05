@@ -19,8 +19,27 @@ import { premiumWebhookHandler } from "./controllers/premium.controller";
 const app = express();
 
 // CORS configuration
+const getAllowedOrigins = (): string[] | string | boolean => {
+  const frontendUrl = process.env.FRONTEND_URL;
+  const isProduction = process.env.NODE_ENV === "production";
+  
+  if (frontendUrl) {
+    // Support multiple origins (comma-separated) or single origin
+    const origins = frontendUrl.split(",").map(url => url.trim());
+    return origins.length === 1 ? origins[0] : origins;
+  }
+  
+  // Development fallback
+  if (!isProduction) {
+    return ["http://localhost:8080", "http://localhost:5173"];
+  }
+  
+  // Production: deny all if no FRONTEND_URL set
+  return false;
+};
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? false : "http://localhost:8080"),
+  origin: getAllowedOrigins(),
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
