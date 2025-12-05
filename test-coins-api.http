@@ -1,0 +1,54 @@
+### Coins API Testing - HTTP Requests
+### Use with REST Client extension in VS Code or similar tools
+
+@baseUrl = http://localhost:4000/api
+@token = YOUR_JWT_TOKEN_HERE
+
+### 1. Get Coin Bundles
+GET {{baseUrl}}/coins/bundles
+Authorization: Bearer {{token}}
+
+###
+
+### 2. Create Payment Order (Bundle ID 1 = ₹10 = 100 coins)
+POST {{baseUrl}}/coins/create-order
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bundleId": 1
+}
+
+###
+
+### 3. Verify Payment (Replace with actual order ID from step 2)
+POST {{baseUrl}}/coins/verify
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "razorpay_order_id": "order_1234567890",
+  "razorpay_payment_id": "pay_1234567890",
+  "razorpay_signature": "signature_1234567890"
+}
+
+###
+
+### 4. Gift Coins (Replace with actual recipient user ID)
+POST {{baseUrl}}/coins/gift
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "toUserId": "recipient_user_id_here",
+  "coins": 50
+}
+
+###
+
+### 5. Get Transaction History
+GET {{baseUrl}}/coins/history
+Authorization: Bearer {{token}}
+
+###
+

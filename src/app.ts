@@ -11,6 +11,10 @@ import adminRoutes from "./routes/admin.routes";
 import collegeRoutes from "./routes/college.routes";
 import studentRoutes from "./routes/student.routes";
 import uploadRoutes from "./routes/upload.routes";
+import coinRoutes from "./routes/coins.routes";
+import premiumRoutes from "./routes/premium.routes";
+import legalRoutes from "./routes/legal.routes";
+import { premiumWebhookHandler } from "./controllers/premium.controller";
 
 const app = express();
 
@@ -50,6 +54,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/college", collegeRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/coins", coinRoutes);
+app.use("/api/premium", premiumRoutes);
+// Legal pages (public, no auth required)
+app.use("/api/legal", legalRoutes);
+// Webhook route (no auth required)
+app.post("/api/premium/webhook", premiumWebhookHandler);
 
 // 404 handler
 app.use(notFoundHandler);

@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: connectx-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_PREMIUM_MONTHLY_PLAN_ID
+        sync: false
+      - key: RAZORPAY_PREMIUM_ANNUAL_PLAN_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_BUCKET_NAME
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+

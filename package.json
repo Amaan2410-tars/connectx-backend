@@ -10,7 +10,11 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:dev": "ts-node --files src/server.ts"
+    "start:dev": "ts-node --files src/server.ts",
+    "seed": "ts-node --files prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "ts-node --files prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

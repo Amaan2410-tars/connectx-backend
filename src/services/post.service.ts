@@ -39,13 +39,18 @@ export const getFeed = async (userId: string, limit: number = 20, cursor?: strin
   const posts = await prisma.post.findMany({
     where,
     take: limit + 1,
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      { user: { isPremium: "desc" } },
+      { createdAt: "desc" },
+    ],
     include: {
       user: {
         select: {
           id: true,
           name: true,
           avatar: true,
+          isPremium: true,
+          premiumBadge: true,
         },
       },
       likes: {
