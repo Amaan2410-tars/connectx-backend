@@ -64,31 +64,44 @@ if (!isProduction && fs.existsSync(logsDir)) {
   }
 }
 
+// Always add console transport (for both dev and production)
+// In production, console output goes to Render logs
+transports.push(
+  new winston.transports.Console({
+    format: consoleFormat,
+  })
+);
+
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
   format: logFormat,
   defaultMeta: { service: "connectx-backend" },
   transports,
-  exceptionHandlers: isProduction ? [] : [
-    new winston.transports.File({
-      filename: path.join(logsDir, "exceptions.log"),
-    }),
-  ],
-  rejectionHandlers: isProduction ? [] : [
-    new winston.transports.File({
-      filename: path.join(logsDir, "rejections.log"),
-    }),
-  ],
-});
-
-// If we're not in production, log to the console as well
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
+  exceptionHandlers: isProduction ? [
     new winston.transports.Console({
       format: consoleFormat,
     })
-  );
-}
+  ] : [
+    new winston.transports.File({
+      filename: path.join(logsDir, "exceptions.log"),
+    }),
+    new winston.transports.Console({
+      format: consoleFormat,
+    })
+  ],
+  rejectionHandlers: isProduction ? [
+    new winston.transports.Console({
+      format: consoleFormat,
+    })
+  ] : [
+    new winston.transports.File({
+      filename: path.join(logsDir, "rejections.log"),
+    }),
+    new winston.transports.Console({
+      format: consoleFormat,
+    })
+  ],
+});
 
 // Helper functions
 export const logInfo = (message: string, meta?: any) => {
