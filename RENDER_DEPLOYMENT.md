@@ -37,7 +37,7 @@ RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 RAZORPAY_PREMIUM_MONTHLY_PLAN_ID=your_monthly_plan_id
 RAZORPAY_PREMIUM_ANNUAL_PLAN_ID=your_annual_plan_id
 FRONTEND_URL=https://your-frontend.vercel.app
-BASE_URL=https://connectx-backend.onrender.com
+BASE_URL=https://connectx-backend-p1n4.onrender.com
 ```
 
 **Optional:**
