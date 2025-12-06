@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma";
 import { SignupInput, LoginInput } from "../utils/validators/auth.validators";
-import { Role } from "@prisma/client";
+import { Role, Prisma } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET || "connectx_jwt_secret";
 const REFRESH_TOKEN_SECRET =
@@ -141,6 +141,7 @@ export const loginUser = async (data: LoginInput) => {
 
   // Find user using raw query to avoid Prisma schema mismatch
   // This works even if new columns don't exist yet
+  const normalizedEmail = email.toLowerCase().trim();
   const users = await prisma.$queryRaw<Array<{
     id: string;
     name: string;
@@ -155,15 +156,17 @@ export const loginUser = async (data: LoginInput) => {
     verifiedStatus: string;
     points: number;
     createdAt: Date;
-  }>>`
-    SELECT 
-      id, name, email, phone, password, role, 
-      "collegeId", batch, avatar, banner, 
-      "verifiedStatus", points, "createdAt"
-    FROM "User"
-    WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
-    LIMIT 1
-  `, email);
+  }>>(
+    Prisma.sql`
+      SELECT 
+        id, name, email, phone, password, role, 
+        "collegeId", batch, avatar, banner, 
+        "verifiedStatus", points, "createdAt"
+      FROM "User"
+      WHERE LOWER(TRIM(email)) = LOWER(TRIM(${normalizedEmail}))
+      LIMIT 1
+    `
+  );
 
   const user = users[0];
   
