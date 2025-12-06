@@ -193,6 +193,7 @@ export const getAllUsers = async (limit: number = 50, cursor?: string) => {
       collegeId: true,
       batch: true,
       verifiedStatus: true,
+      bypassVerified: true,
       points: true,
       coins: true,
       isPremium: true,
