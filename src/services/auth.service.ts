@@ -36,11 +36,11 @@ export const generateRefreshToken = (userId: string): string => {
   });
 };
 
-// Signup user
+// Signup user - requires OTP verification first
 export const signupUser = async (data: SignupInput) => {
-  const { email, password, name, phone, collegeId, batch, role } = data;
+  const { email, password, name, username, phone, collegeId, batch, role } = data;
 
-  // Check if user already exists
+  // Check if user already exists by email
   const existingUser = await prisma.user.findUnique({
     where: { email },
   });
@@ -49,16 +49,37 @@ export const signupUser = async (data: SignupInput) => {
     throw new Error("User with this email already exists");
   }
 
-  // Check if phone is already taken (if provided)
-  if (phone) {
-    const existingPhone = await prisma.user.findUnique({
-      where: { phone },
-    });
+  // Check if username already exists
+  const existingUsername = await prisma.user.findUnique({
+    where: { username },
+  });
 
-    if (existingPhone) {
-      throw new Error("User with this phone number already exists");
-    }
+  if (existingUsername) {
+    throw new Error("Username is already taken");
   }
+
+  // Check if phone is already taken
+  const existingPhone = await prisma.user.findUnique({
+    where: { phone },
+  });
+
+  if (existingPhone) {
+    throw new Error("User with this phone number already exists");
+  }
+
+  // Validate that collegeId exists
+  const college = await prisma.college.findUnique({
+    where: { id: collegeId },
+  });
+
+  if (!college) {
+    throw new Error("Invalid college selected. Please select a valid college.");
+  }
+
+  // IMPORTANT: Check if email and phone are verified via OTP
+  // This should be checked before creating the user
+  // For now, we'll create the user but they must verify before accessing the app
+  // In a production system, you might want to create a temporary user record first
 
   // Hash password
   const hashedPassword = await hashPassword(password);
@@ -66,20 +87,24 @@ export const signupUser = async (data: SignupInput) => {
   // Determine user role
   const userRole: Role = role || "student";
 
-  // Create user
+  // Create user (emailVerified and phoneVerified will be false initially)
   const user = await prisma.user.create({
     data: {
       email,
+      username,
       password: hashedPassword,
       name,
-      phone: phone || null,
-      collegeId: collegeId || null,
-      batch: batch || null,
+      phone,
+      collegeId,
+      batch,
       role: userRole,
+      emailVerified: false, // Must verify via OTP
+      phoneVerified: false, // Must verify via OTP
     },
     select: {
       id: true,
       name: true,
+      username: true,
       email: true,
       phone: true,
       role: true,
@@ -88,6 +113,8 @@ export const signupUser = async (data: SignupInput) => {
       avatar: true,
       banner: true,
       verifiedStatus: true,
+      emailVerified: true,
+      phoneVerified: true,
       points: true,
       createdAt: true,
     },
@@ -145,6 +172,7 @@ export const getUserById = async (userId: string) => {
     select: {
       id: true,
       name: true,
+      username: true,
       email: true,
       phone: true,
       role: true,

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authRequired, studentOnly } from "../middleware/auth.middleware";
+import { authRequired, studentOnly, verifiedStudentOnly } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate";
 import { postLimiter, likeLimiter, commentLimiter, uploadLimiter } from "../middleware/rateLimiter";
 import { updateProfileSchema } from "../utils/validators/profile.validators";
@@ -27,6 +27,8 @@ import {
 import {
   submitVerificationHandler,
   getVerificationStatusHandler,
+  uploadIdCardHandler,
+  uploadFaceImageHandler,
 } from "../controllers/verificationSubmission.controller";
 import { uploadVerificationImages, uploadPostImage, uploadProfileImages } from "../middleware/upload.middleware";
 import {
@@ -53,7 +55,17 @@ import {
 const router = Router();
 
 // All student routes require authentication and student role
+// Most routes require full verification, but verification routes themselves don't
 router.use(authRequired, studentOnly);
+
+// Verification routes (don't require full verification)
+router.post("/verification", uploadLimiter, uploadVerificationImages, submitVerificationHandler);
+router.post("/verify/id-upload", uploadLimiter, uploadVerificationImages, uploadIdCardHandler);
+router.post("/verify/face-upload", uploadLimiter, uploadVerificationImages, uploadFaceImageHandler);
+router.get("/verify/status", getVerificationStatusHandler);
+
+// All other routes require full verification
+router.use(verifiedStudentOnly);
 
 // Profile
 router.get("/profile", getProfileHandler);
@@ -66,10 +78,6 @@ router.post("/posts/:id/like", likeLimiter, validate(postParamsSchema), likePost
 router.delete("/posts/:id/like", validate(postParamsSchema), unlikePostHandler);
 router.post("/posts/:id/comments", commentLimiter, validate(commentSchema), commentOnPostHandler);
 router.get("/posts/:id/comments", validate(postParamsSchema), getPostCommentsHandler);
-
-// Verification
-router.post("/verification", uploadLimiter, uploadVerificationImages, submitVerificationHandler);
-router.get("/verification/status", getVerificationStatusHandler);
 
 // Clubs
 router.get("/clubs", getClubsHandler);

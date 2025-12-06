@@ -9,15 +9,22 @@ datasource db {
 model User {
   id             String             @id @default(cuid())
   name           String
+  username       String             @unique
   email          String             @unique
-  phone          String?            @unique
+  phone          String             @unique
   password       String
   role           Role               @default(student)
-  collegeId      String?
-  batch          String?
+  collegeId      String
+  batch          String
   avatar         String?
   banner         String?
   verifiedStatus VerificationStatus @default(pending)
+  emailVerified  Boolean            @default(false)
+  phoneVerified  Boolean            @default(false)
+  emailOtp       String?
+  phoneOtp       String?
+  otpExpiresAt   DateTime?
+  bypassVerified Boolean            @default(false)
   points         Int                @default(0)
   coins          Int                @default(0)
   isPremium      Boolean            @default(false)
@@ -29,13 +36,14 @@ model User {
   eventsRSVP     EventsOnUsers[]
   likes          Like[]
   posts          Post[]
-  college        College?           @relation(fields: [collegeId], references: [id])
+  college        College            @relation(fields: [collegeId], references: [id])
   verifications  Verification[]
+  otpRequests    OtpRequest[]
   clubs          Club[]             @relation("ClubMembers")
   coinPurchases  CoinPurchase[]
   sentCoins      CoinTransaction[]  @relation("SentCoins")
-  receivedCoins CoinTransaction[]   @relation("ReceivedCoins")
-  subscriptions Subscription[]
+  receivedCoins  CoinTransaction[]  @relation("ReceivedCoins")
+  subscriptions  Subscription[]
 }
 
 model College {
@@ -53,14 +61,28 @@ model College {
 }
 
 model Verification {
-  id          String             @id @default(cuid())
-  userId      String
-  idCardImage String
-  faceImage   String
-  status      VerificationStatus @default(pending)
-  reviewedBy  String?
-  createdAt   DateTime           @default(now())
-  user        User               @relation(fields: [userId], references: [id])
+  id              String             @id @default(cuid())
+  userId          String
+  idCardImage     String
+  faceImage       String
+  status          VerificationStatus @default(pending)
+  reviewedBy      String?
+  matchScore      Int?
+  faceMatchScore  Int?
+  collegeMatch    Boolean?
+  analysisRemarks String?
+  rejectedAt      DateTime?
+  createdAt       DateTime           @default(now())
+  user            User               @relation(fields: [userId], references: [id])
+}
+
+model OtpRequest {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Post {
@@ -162,24 +184,24 @@ enum VerificationStatus {
 }
 
 model CoinBundle {
-  id        Int      @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   amountINR Int
   coins     Int
   purchases CoinPurchase[]
 }
 
 model CoinPurchase {
-  id          Int      @id @default(autoincrement())
-  userId      String
-  bundleId    Int
-  coins       Int
-  amountINR   Int
-  status      String   @default("pending")
-  orderId     String?
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    String
+  bundleId  Int
+  coins     Int
+  amountINR Int
+  status    String   @default("pending")
+  orderId   String?
+  createdAt DateTime @default(now())
 
-  user        User       @relation(fields: [userId], references: [id])
-  bundle      CoinBundle @relation(fields: [bundleId], references: [id])
+  user   User       @relation(fields: [userId], references: [id])
+  bundle CoinBundle @relation(fields: [bundleId], references: [id])
 }
 
 model CoinTransaction {
@@ -190,19 +212,19 @@ model CoinTransaction {
   type      String
   createdAt DateTime @default(now())
 
-  sender    User? @relation("SentCoins", fields: [fromUser], references: [id])
-  receiver  User? @relation("ReceivedCoins", fields: [toUser], references: [id])
+  sender   User? @relation("SentCoins", fields: [fromUser], references: [id])
+  receiver User? @relation("ReceivedCoins", fields: [toUser], references: [id])
 }
 
 model Subscription {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   userId           String
-  razorpaySubId    String   @unique
+  razorpaySubId    String    @unique
   razorpayPlanId   String
   planType         String
   status           String
   currentPeriodEnd DateTime
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
   cancelledAt      DateTime?
 
   user User @relation(fields: [userId], references: [id])

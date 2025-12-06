@@ -5,6 +5,7 @@ import {
   getCollegeById,
   updateCollege,
   deleteCollege,
+  getCollegesForSignup,
 } from "../services/college.service";
 import { AppError } from "../middleware/errorHandler";
 
@@ -42,6 +43,23 @@ export const getAllCollegesHandler = async (
 ) => {
   try {
     const colleges = await getAllColleges();
+    res.status(200).json({
+      success: true,
+      data: colleges,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public endpoint for signup page
+export const getCollegesForSignupHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const colleges = await getCollegesForSignup();
     res.status(200).json({
       success: true,
       data: colleges,

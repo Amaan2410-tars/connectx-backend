@@ -24,6 +24,12 @@ import {
   deletePostHandler,
   getAnalyticsHandler,
 } from "../controllers/admin.controller";
+import {
+  getAllPendingVerificationsHandler,
+  approveRejectVerificationHandler,
+  bypassVerificationHandler,
+} from "../controllers/verification.controller";
+import { approveRejectVerificationSchema } from "../utils/validators/verification.validators";
 
 const router = Router();
 
@@ -46,6 +52,15 @@ router.delete("/posts/:id", validate(deletePostSchema), deletePostHandler);
 
 // Analytics
 router.get("/analytics", getAnalyticsHandler);
+
+// Verification Management (Super Admin - All Colleges)
+router.get("/verifications/pending", getAllPendingVerificationsHandler);
+router.put(
+  "/verifications/:id",
+  validate(approveRejectVerificationSchema),
+  approveRejectVerificationHandler
+);
+router.post("/verification/bypass", bypassVerificationHandler);
 
 export default router;
 

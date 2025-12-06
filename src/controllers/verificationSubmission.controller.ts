@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import {
   submitVerification,
   getVerificationStatus,
+  uploadIdCard,
+  uploadFaceImage,
 } from "../services/verificationSubmission.service";
 import { AppError } from "../middleware/errorHandler";
 import { processVerificationFiles } from "../services/fileUpload.service";
@@ -76,6 +78,88 @@ export const getVerificationStatusHandler = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const uploadIdCardHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    
+    let idCardImageUrl: string;
+    
+    if (files && files.idCard && files.idCard[0]) {
+      const uploadedFiles = processVerificationFiles({ idCard: files.idCard });
+      idCardImageUrl = uploadedFiles.idCard.url;
+    } else if (req.body.idCardImage) {
+      idCardImageUrl = req.body.idCardImage;
+    } else {
+      throw new Error("ID card image is required");
+    }
+
+    const verification = await uploadIdCard(req.user.userId, idCardImageUrl);
+    
+    res.status(200).json({
+      success: true,
+      message: "ID card uploaded successfully",
+      data: verification,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = 400;
+      next(appError);
+    } else {
+      next(error);
+    }
+  }
+};
+
+export const uploadFaceImageHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    
+    let faceImageUrl: string;
+    
+    if (files && files.faceImage && files.faceImage[0]) {
+      const uploadedFiles = processVerificationFiles({ faceImage: files.faceImage });
+      faceImageUrl = uploadedFiles.faceImage.url;
+    } else if (req.body.faceImage) {
+      faceImageUrl = req.body.faceImage;
+    } else {
+      throw new Error("Face image is required");
+    }
+
+    const verification = await uploadFaceImage(req.user.userId, faceImageUrl);
+    
+    res.status(200).json({
+      success: true,
+      message: "Face image uploaded and analyzed successfully",
+      data: verification,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = 400;
+      next(appError);
+    } else {
+      next(error);
+    }
   }
 };
 

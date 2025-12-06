@@ -15,9 +15,48 @@ export const getPendingVerifications = async (collegeId: string) => {
           id: true,
           name: true,
           email: true,
+          phone: true,
           batch: true,
+          emailVerified: true,
+          phoneVerified: true,
+          bypassVerified: true,
           college: {
             select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return verifications;
+};
+
+// Get all pending verifications across all colleges (for super admin)
+export const getAllPendingVerifications = async () => {
+  const verifications = await prisma.verification.findMany({
+    where: {
+      status: "pending",
+      user: {
+        role: "student",
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          batch: true,
+          emailVerified: true,
+          phoneVerified: true,
+          bypassVerified: true,
+          college: {
+            select: {
+              id: true,
               name: true,
             },
           },
@@ -68,6 +107,49 @@ export const approveVerification = async (
   return { message: "Verification approved successfully" };
 };
 
+export const bypassVerification = async (
+  userId: string,
+  reviewedBy: string
+) => {
+  // Get user
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Update user to bypass verification
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      verifiedStatus: "approved",
+      bypassVerified: true,
+    },
+  });
+
+  // If there's a pending verification, mark it as approved
+  const pendingVerification = await prisma.verification.findFirst({
+    where: {
+      userId,
+      status: "pending",
+    },
+  });
+
+  if (pendingVerification) {
+    await prisma.verification.update({
+      where: { id: pendingVerification.id },
+      data: {
+        status: "approved",
+        reviewedBy,
+      },
+    });
+  }
+
+  return { message: "Verification bypassed successfully" };
+};
+
 export const rejectVerification = async (
   verificationId: string,
   reviewedBy: string
@@ -86,12 +168,13 @@ export const rejectVerification = async (
     throw new Error("Verification has already been processed");
   }
 
-  // Update verification status
+  // Update verification status with rejection timestamp
   await prisma.verification.update({
     where: { id: verificationId },
     data: {
       status: "rejected",
       reviewedBy,
+      rejectedAt: new Date(),
     },
   });
 

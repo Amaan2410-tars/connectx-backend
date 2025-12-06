@@ -42,6 +42,20 @@ export const getAllColleges = async () => {
   return colleges;
 };
 
+// Public endpoint - get colleges for signup (only id, name, slug)
+export const getCollegesForSignup = async () => {
+  const colleges = await prisma.college.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return colleges;
+};
+
 export const getCollegeById = async (id: string) => {
   const college = await prisma.college.findUnique({
     where: { id },

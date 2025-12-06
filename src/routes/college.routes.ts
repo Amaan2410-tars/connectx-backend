@@ -20,6 +20,7 @@ import {
 import {
   getPendingVerificationsHandler,
   approveRejectVerificationHandler,
+  bypassVerificationHandler,
 } from "../controllers/verification.controller";
 import {
   createEventHandler,
@@ -55,6 +56,7 @@ router.put(
   validate(approveRejectVerificationSchema),
   approveRejectVerificationHandler
 );
+router.post("/verification/bypass", bypassVerificationHandler);
 
 // Events
 router.post("/events", uploadLimiter, uploadEventImage, validate(createEventSchema), createEventHandler);

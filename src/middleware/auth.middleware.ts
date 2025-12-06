@@ -103,3 +103,60 @@ export const studentOnly = (
   next();
 };
 
+// Middleware to check if student is fully verified
+export const verifiedStudentOnly = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      const error: AppError = new Error("Authentication required");
+      error.statusCode = 401;
+      return next(error);
+    }
+
+    if (req.user.role !== "student") {
+      const error: AppError = new Error("Student access required");
+      error.statusCode = 403;
+      return next(error);
+    }
+
+    // Check verification status
+    const prisma = (await import("../config/prisma")).default;
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        emailVerified: true,
+        phoneVerified: true,
+        verifiedStatus: true,
+        bypassVerified: true,
+      },
+    });
+
+    if (!user) {
+      const error: AppError = new Error("User not found");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    // Check if user is fully verified
+    const isVerified =
+      user.emailVerified &&
+      user.phoneVerified &&
+      (user.verifiedStatus === "approved" || user.bypassVerified);
+
+    if (!isVerified) {
+      const error: AppError = new Error(
+        "Account verification required. Please complete email, phone, and identity verification."
+      );
+      error.statusCode = 403;
+      return next(error);
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+

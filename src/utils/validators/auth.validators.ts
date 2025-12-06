@@ -3,11 +3,12 @@ import { z } from "zod";
 export const signupSchema = z.object({
   body: z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
+    username: z.string().min(3, "Username must be at least 3 characters").max(30, "Username must be less than 30 characters"),
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
-    phone: z.string().optional(),
-    collegeId: z.string().optional(),
-    batch: z.string().optional(),
+    phone: z.string().min(10, "Phone number is required"),
+    collegeId: z.string().min(1, "College selection is required"),
+    batch: z.string().min(1, "Batch selection is required"),
     role: z.enum(["super_admin", "college_admin", "student"]).optional(),
   }),
 });
