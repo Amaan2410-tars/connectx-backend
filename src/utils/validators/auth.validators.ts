@@ -14,6 +14,7 @@ export const signupSchema = z.object({
       .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
     phone: z.string().min(10, "Phone number is required"),
     collegeId: z.string().min(1, "College selection is required"),
+    courseId: z.string().min(1, "Course selection is required"),
     batch: z.string().min(1, "Batch selection is required"),
     role: z.enum(["super_admin", "college_admin", "student"]).optional(),
   }),

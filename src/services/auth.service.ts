@@ -38,7 +38,7 @@ export const generateRefreshToken = (userId: string): string => {
 
 // Signup user - requires OTP verification first
 export const signupUser = async (data: SignupInput) => {
-  const { email, password, name, username, phone, collegeId, batch, role } = data;
+  const { email, password, name, username, phone, collegeId, courseId, batch, role } = data;
 
   // Check if user already exists by email
   const existingUser = await prisma.user.findUnique({
@@ -76,6 +76,23 @@ export const signupUser = async (data: SignupInput) => {
     throw new Error("Invalid college selected. Please select a valid college.");
   }
 
+  // Validate that courseId exists and belongs to the selected college
+  if (courseId) {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!course) {
+      throw new Error("Invalid course selected. Please select a valid course.");
+    }
+
+    if (course.collegeId !== collegeId) {
+      throw new Error("Selected course does not belong to the selected college.");
+    }
+  } else {
+    throw new Error("Course selection is required.");
+  }
+
   // IMPORTANT: Check if email and phone are verified via OTP
   // This should be checked before creating the user
   // For now, we'll create the user but they must verify before accessing the app
@@ -96,6 +113,7 @@ export const signupUser = async (data: SignupInput) => {
       name,
       phone,
       collegeId,
+      courseId,
       batch,
       role: userRole,
       emailVerified: false, // Must verify via OTP

@@ -5,6 +5,7 @@ import { signupSchema, loginSchema } from "../utils/validators/auth.validators";
 import { authRequired } from "../middleware/auth.middleware";
 import { authLimiter } from "../middleware/rateLimiter";
 import { getCollegesForSignupHandler } from "../controllers/college.controller";
+import { getCoursesByCollegeHandler } from "../controllers/course.controller";
 import {
   sendEmailOtpHandler,
   sendPhoneOtpHandler,
@@ -28,6 +29,7 @@ router.post("/verify-phone-otp", authLimiter, validate(verifyPhoneOtpSchema), ve
 router.post("/signup", authLimiter, validate(signupSchema), signup);
 router.post("/login", authLimiter, validate(loginSchema), login);
 router.get("/colleges", getCollegesForSignupHandler); // Public endpoint for signup page
+router.get("/colleges/:collegeId/courses", getCoursesByCollegeHandler); // Public endpoint to get courses by college
 
 // Protected routes
 router.get("/me", authRequired, getMe);

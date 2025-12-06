@@ -15,6 +15,7 @@ model User {
   password       String
   role           Role               @default(student)
   collegeId      String
+  courseId       String?
   batch          String
   avatar         String?
   banner         String?
@@ -37,6 +38,7 @@ model User {
   likes          Like[]
   posts          Post[]
   college        College            @relation(fields: [collegeId], references: [id])
+  course         Course?            @relation(fields: [courseId], references: [id])
   verifications  Verification[]
   otpRequests    OtpRequest[]
   clubs          Club[]             @relation("ClubMembers")
@@ -58,6 +60,7 @@ model College {
   clubs     Club[]
   events    Event[]
   users     User[]
+  courses   Course[]
 }
 
 model Verification {
@@ -70,6 +73,9 @@ model Verification {
   matchScore      Int?
   faceMatchScore  Int?
   collegeMatch    Boolean?
+  courseMatch     Boolean?
+  courseDetected  String?
+  idCardText      String?
   analysisRemarks String?
   rejectedAt      DateTime?
   createdAt       DateTime           @default(now())
@@ -228,4 +234,14 @@ model Subscription {
   cancelledAt      DateTime?
 
   user User @relation(fields: [userId], references: [id])
+}
+
+model Course {
+  id        String   @id @default(cuid())
+  name      String
+  code      String?
+  collegeId String
+  createdAt DateTime @default(now())
+  college   College  @relation(fields: [collegeId], references: [id])
+  users     User[]
 }

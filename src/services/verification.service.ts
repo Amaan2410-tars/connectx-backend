@@ -54,7 +54,14 @@ export const getAllPendingVerifications = async () => {
           phone: true,
           batch: true,
           collegeId: true,
+          courseId: true,
           college: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          course: {
             select: {
               id: true,
               name: true,

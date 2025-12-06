@@ -2,13 +2,51 @@ import prisma from "../config/prisma";
 import { Prisma } from "@prisma/client";
 import { SubmitVerificationInput } from "../utils/validators/verificationSubmission.validators";
 
-// Placeholder function to extract college name from ID card image
+// Placeholder function to extract text from ID card image using OCR
 // In production, this would use OCR (Tesseract.js, Google Vision API, etc.)
+const extractIdCardText = async (idCardImageUrl: string): Promise<string> => {
+  // TODO: Implement OCR to extract text from ID card
+  // For now, return placeholder text
+  console.log(`🔍 Extracting text from ID card: ${idCardImageUrl}`);
+  return "MIT Computer Science Engineering"; // Placeholder - replace with actual OCR
+};
+
+// Extract college name from ID card text
 const extractCollegeNameFromId = async (idCardImageUrl: string): Promise<string> => {
-  // TODO: Implement OCR to extract college name from ID card
-  // For now, return placeholder
-  console.log(`🔍 Extracting college name from ID card: ${idCardImageUrl}`);
-  return "MIT"; // Placeholder - replace with actual OCR
+  const text = await extractIdCardText(idCardImageUrl);
+  // Simple extraction - in production, use better NLP/pattern matching
+  return text.split(" ")[0] || "MIT"; // Placeholder
+};
+
+// Extract course name from ID card text
+const extractCourseFromId = async (idCardImageUrl: string, collegeCourses: Array<{ id: string; name: string }>): Promise<string | null> => {
+  const text = await extractIdCardText(idCardImageUrl);
+  
+  if (!collegeCourses || collegeCourses.length === 0) {
+    return null;
+  }
+
+  // Find closest matching course using simple string matching
+  // In production, use better fuzzy matching algorithms
+  const textLower = text.toLowerCase();
+  
+  for (const course of collegeCourses) {
+    const courseNameLower = course.name.toLowerCase();
+    // Check if course name appears in extracted text
+    if (textLower.includes(courseNameLower) || courseNameLower.includes(textLower)) {
+      return course.name;
+    }
+    
+    // Check for common course abbreviations
+    const courseWords = course.name.split(" ");
+    for (const word of courseWords) {
+      if (word.length > 3 && textLower.includes(word.toLowerCase())) {
+        return course.name;
+      }
+    }
+  }
+  
+  return null;
 };
 
 // Placeholder function for face matching
@@ -151,8 +189,39 @@ export const uploadFaceImage = async (userId: string, faceImageUrl: string) => {
   const collegeMatch = userCollegeName.toLowerCase().includes(extractedCollegeName.toLowerCase()) ||
                        extractedCollegeName.toLowerCase().includes(userCollegeName.toLowerCase());
 
-  // Calculate match score
-  const matchScore = Math.floor(faceMatchScore * 0.7 + (collegeMatch ? 30 : 0));
+  // Extract course from ID card
+  const collegeCourses = await prisma.course.findMany({
+    where: { collegeId: verification.user.collegeId },
+    select: { id: true, name: true },
+  });
+
+  const courseDetected = await extractCourseFromId(verification.idCardImage, collegeCourses);
+  
+  // Check if detected course matches user's selected course
+  let courseMatch = false;
+  if (verification.user.courseId && courseDetected) {
+    const userCourse = await prisma.course.findUnique({
+      where: { id: verification.user.courseId },
+      select: { name: true },
+    });
+    
+    if (userCourse) {
+      const userCourseName = userCourse.name.toLowerCase();
+      const detectedCourseName = courseDetected.toLowerCase();
+      courseMatch = userCourseName.includes(detectedCourseName) || 
+                    detectedCourseName.includes(userCourseName);
+    }
+  }
+
+  // Extract full ID card text for admin review
+  const idCardText = await extractIdCardText(verification.idCardImage);
+
+  // Calculate match score: faceMatchScore * 0.6 + collegeMatch (20) + courseMatch (20)
+  const matchScore = Math.floor(
+    faceMatchScore * 0.6 + 
+    (collegeMatch ? 20 : 0) + 
+    (courseMatch ? 20 : 0)
+  );
 
   // Determine status based on match score
   let status: "approved" | "pending" | "rejected";
@@ -161,15 +230,15 @@ export const uploadFaceImage = async (userId: string, faceImageUrl: string) => {
   if (matchScore >= 80) {
     // Auto-approve for 80-100%
     status = "approved";
-    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}. Auto-approved (Score: ${matchScore}%)`;
+    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}, Course match: ${courseMatch ? "Yes" : "No"}. Auto-approved (Score: ${matchScore}%)`;
   } else if (matchScore >= 40) {
     // Send to admin for 40-80%
     status = "pending";
-    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}. Requires admin review (Score: ${matchScore}%)`;
+    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}, Course match: ${courseMatch ? "Yes" : "No"}. Requires admin review (Score: ${matchScore}%)`;
   } else {
     // Auto-reject for < 40%
     status = "rejected";
-    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}. Auto-rejected (Score: ${matchScore}%)`;
+    analysisRemarks = `Face match: ${faceMatchScore}%, College match: ${collegeMatch ? "Yes" : "No"}, Course match: ${courseMatch ? "Yes" : "No"}. Auto-rejected (Score: ${matchScore}%)`;
   }
 
   // Update verification with face image and analysis results
@@ -179,6 +248,9 @@ export const uploadFaceImage = async (userId: string, faceImageUrl: string) => {
       faceImage: faceImageUrl,
       faceMatchScore,
       collegeMatch,
+      courseMatch,
+      courseDetected,
+      idCardText,
       matchScore,
       analysisRemarks,
       status,
