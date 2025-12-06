@@ -139,58 +139,68 @@ export const loginUser = async (data: LoginInput) => {
     throw new Error("Email and password are required");
   }
 
-  // Find user - use minimal select to avoid schema mismatch errors
-  // If new verification fields don't exist yet, this will still work
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      email: true,
-      phone: true,
-      password: true,
-      role: true,
-      collegeId: true,
-      batch: true,
-      avatar: true,
-      banner: true,
-      verifiedStatus: true,
-      points: true,
-      coins: true,
-      isPremium: true,
-      createdAt: true,
-    },
-  });
+  // Find user using raw query to avoid Prisma schema mismatch
+  // This works even if new columns don't exist yet
+  const users = await prisma.$queryRaw<Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    password: string;
+    role: string;
+    collegeId: string | null;
+    batch: string | null;
+    avatar: string | null;
+    banner: string | null;
+    verifiedStatus: string;
+    points: number;
+    createdAt: Date;
+  }>>`
+    SELECT 
+      id, name, email, phone, password, role, 
+      "collegeId", batch, avatar, banner, 
+      "verifiedStatus", points, "createdAt"
+    FROM "User"
+    WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+    LIMIT 1
+  `, email);
 
+  const user = users[0];
+  
   if (!user) {
     console.log("❌ User not found for email:", email);
     throw new Error("Invalid email or password");
   }
 
-  console.log("👤 User found:", user.email, "Role:", user.role);
+  // Cast role to Role enum type
+  const userWithRole = {
+    ...user,
+    role: user.role as Role,
+  };
+
+  console.log("👤 User found:", userWithRole.email, "Role:", userWithRole.role);
 
   // Verify password
-  if (!user.password) {
+  if (!userWithRole.password) {
     console.log("❌ User has no password set");
     throw new Error("Invalid email or password");
   }
 
-  const isPasswordValid = await comparePassword(password, user.password);
+  const isPasswordValid = await comparePassword(password, userWithRole.password);
 
   if (!isPasswordValid) {
-    console.log("❌ Password mismatch for user:", user.email);
+    console.log("❌ Password mismatch for user:", userWithRole.email);
     throw new Error("Invalid email or password");
   }
 
-  console.log("✅ Password verified for user:", user.email);
+  console.log("✅ Password verified for user:", userWithRole.email);
 
   // Generate tokens
-  const accessToken = generateAccessToken(user.id, user.role);
-  const refreshToken = generateRefreshToken(user.id);
+  const accessToken = generateAccessToken(userWithRole.id, userWithRole.role);
+  const refreshToken = generateRefreshToken(userWithRole.id);
 
   // Return user without password
-  const { password: _, ...userWithoutPassword } = user;
+  const { password: _, ...userWithoutPassword } = userWithRole;
 
   return {
     user: userWithoutPassword,
