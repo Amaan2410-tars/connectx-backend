@@ -1,25 +1,30 @@
 import prisma from "../config/prisma";
 
 export const getClubs = async (collegeId: string) => {
-  const clubs = await prisma.club.findMany({
-    where: { collegeId },
-    include: {
-      college: {
-        select: {
-          id: true,
-          name: true,
+  try {
+    const clubs = await prisma.club.findMany({
+      where: { collegeId },
+      include: {
+        college: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+          },
         },
       },
-      _count: {
-        select: {
-          members: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  return clubs;
+    return clubs;
+  } catch (error) {
+    console.error("Error in getClubs:", error);
+    throw error;
+  }
 };
 
 export const getClubById = async (clubId: string) => {

@@ -1,11 +1,16 @@
 import prisma from "../config/prisma";
 
 export const getRewards = async () => {
-  const rewards = await prisma.reward.findMany({
-    orderBy: { pointsRequired: "asc" },
-  });
+  try {
+    const rewards = await prisma.reward.findMany({
+      orderBy: { pointsRequired: "asc" },
+    });
 
-  return rewards;
+    return rewards;
+  } catch (error) {
+    console.error("Error in getRewards:", error);
+    throw error;
+  }
 };
 
 export const getRewardById = async (rewardId: string) => {

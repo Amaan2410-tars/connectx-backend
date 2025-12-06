@@ -2,37 +2,42 @@ import prisma from "../config/prisma";
 import { UpdateProfileInput } from "../utils/validators/profile.validators";
 
 export const getProfile = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      collegeId: true,
-      batch: true,
-      avatar: true,
-      banner: true,
-      verifiedStatus: true,
-      points: true,
-      createdAt: true,
-      college: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          logo: true,
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        collegeId: true,
+        batch: true,
+        avatar: true,
+        banner: true,
+        verifiedStatus: true,
+        points: true,
+        createdAt: true,
+        college: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!user) {
-    throw new Error("User not found");
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
+  } catch (error) {
+    console.error("Error in getProfile:", error);
+    throw error;
   }
-
-  return user;
 };
 
 export const updateProfile = async (userId: string, data: UpdateProfileInput) => {

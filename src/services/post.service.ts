@@ -30,56 +30,71 @@ export const createPost = async (userId: string, data: CreatePostInput) => {
 };
 
 export const getFeed = async (userId: string, limit: number = 20, cursor?: string) => {
-  const where = cursor
-    ? {
-        id: { lt: cursor },
-      }
-    : {};
+  try {
+    // Get user's college for filtering
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { collegeId: true },
+    });
 
-  const posts = await prisma.post.findMany({
-    where,
-    take: limit + 1,
-    orderBy: [
-      { user: { isPremium: "desc" } },
-      { createdAt: "desc" },
-    ],
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          avatar: true,
-          isPremium: true,
-          premiumBadge: true,
+    const where: any = {};
+    
+    if (cursor) {
+      where.id = { lt: cursor };
+    }
+
+    // Filter by user's college if they have one
+    if (user?.collegeId) {
+      where.user = {
+        collegeId: user.collegeId,
+      };
+    }
+
+    const posts = await prisma.post.findMany({
+      where,
+      take: limit + 1,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            isPremium: true,
+            premiumBadge: true,
+          },
+        },
+        likes: {
+          where: { userId },
+          select: { id: true },
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: true,
+          },
         },
       },
-      likes: {
-        where: { userId },
-        select: { id: true },
-      },
-      _count: {
-        select: {
-          likes: true,
-          comments: true,
-        },
-      },
-    },
-  });
+    });
 
-  let nextCursor: string | undefined = undefined;
-  let hasMore = false;
-  
-  if (posts.length > limit) {
-    const nextItem = posts.pop();
-    nextCursor = nextItem?.id;
-    hasMore = true;
+    let nextCursor: string | undefined = undefined;
+    let hasMore = false;
+    
+    if (posts.length > limit) {
+      const nextItem = posts.pop();
+      nextCursor = nextItem?.id;
+      hasMore = true;
+    }
+
+    return {
+      posts,
+      nextCursor,
+      hasMore,
+    };
+  } catch (error) {
+    console.error("Error in getFeed:", error);
+    throw error;
   }
-
-  return {
-    posts,
-    nextCursor,
-    hasMore,
-  };
 };
 
 export const likePost = async (userId: string, postId: string) => {

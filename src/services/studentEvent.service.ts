@@ -1,25 +1,30 @@
 import prisma from "../config/prisma";
 
 export const getEvents = async (collegeId: string) => {
-  const events = await prisma.event.findMany({
-    where: { collegeId },
-    include: {
-      college: {
-        select: {
-          id: true,
-          name: true,
+  try {
+    const events = await prisma.event.findMany({
+      where: { collegeId },
+      include: {
+        college: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            attendees: true,
+          },
         },
       },
-      _count: {
-        select: {
-          attendees: true,
-        },
-      },
-    },
-    orderBy: { date: "asc" },
-  });
+      orderBy: { date: "asc" },
+    });
 
-  return events;
+    return events;
+  } catch (error) {
+    console.error("Error in getEvents:", error);
+    throw error;
+  }
 };
 
 export const getEventById = async (eventId: string) => {
