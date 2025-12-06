@@ -377,14 +377,67 @@ export const getVerificationStatus = async (userId: string) => {
 
   const user = userResult[0];
 
-  // Get latest verification
-  const verifications = await prisma.verification.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 1,
-  });
-
-  const latestVerification = verifications[0] || null;
+  // Get latest verification - try with new columns first, fallback to basic query
+  let latestVerification: any = null;
+  
+  try {
+    // Try to get verification with all columns (including new course fields)
+    const verifications = await prisma.verification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    });
+    latestVerification = verifications[0] || null;
+  } catch (error: any) {
+    // If query fails (columns don't exist), use raw query with only existing columns
+    if (error.message?.includes("does not exist") || error.message?.includes("column")) {
+      const verifications = await prisma.$queryRaw<Array<{
+        id: string;
+        userId: string;
+        idCardImage: string;
+        faceImage: string;
+        status: string;
+        reviewedBy: string | null;
+        matchScore: number | null;
+        faceMatchScore: number | null;
+        collegeMatch: boolean | null;
+        analysisRemarks: string | null;
+        rejectedAt: Date | null;
+        createdAt: Date;
+      }>>(
+        Prisma.sql`
+          SELECT 
+            id, "userId", "idCardImage", "faceImage", status, "reviewedBy",
+            "matchScore", "faceMatchScore", "collegeMatch",
+            "analysisRemarks", "rejectedAt", "createdAt"
+          FROM "Verification"
+          WHERE "userId" = ${userId}
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `
+      );
+      
+      latestVerification = verifications[0] ? {
+        id: verifications[0].id,
+        userId: verifications[0].userId,
+        idCardImage: verifications[0].idCardImage,
+        faceImage: verifications[0].faceImage,
+        status: verifications[0].status as any,
+        reviewedBy: verifications[0].reviewedBy,
+        matchScore: verifications[0].matchScore,
+        faceMatchScore: verifications[0].faceMatchScore,
+        collegeMatch: verifications[0].collegeMatch,
+        courseMatch: null,
+        courseDetected: null,
+        idCardText: null,
+        analysisRemarks: verifications[0].analysisRemarks,
+        rejectedAt: verifications[0].rejectedAt,
+        createdAt: verifications[0].createdAt,
+      } : null;
+    } else {
+      throw error;
+    }
+  }
 
   // Check if user can retry verification (3 hours after rejection)
   let canRetry = true;
