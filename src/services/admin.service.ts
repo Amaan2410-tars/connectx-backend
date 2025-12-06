@@ -37,15 +37,44 @@ export const createCollegeAdmin = async (data: CreateCollegeAdminInput) => {
   // Hash password
   const hashedPassword = await hashPassword(password);
 
+  // Generate username from email
+  const baseUsername = email.split("@")[0];
+  let username = baseUsername + "_admin";
+  
+  // Ensure username is unique
+  let usernameExists = await prisma.user.findUnique({ where: { username } });
+  let counter = 1;
+  while (usernameExists) {
+    username = `${baseUsername}_admin${counter}`;
+    usernameExists = await prisma.user.findUnique({ where: { username } });
+    counter++;
+  }
+
+  // Generate unique phone if not provided
+  let adminPhone = phone;
+  if (!adminPhone) {
+    let phoneExists = true;
+    while (phoneExists) {
+      adminPhone = `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+      phoneExists = await prisma.user.findUnique({ where: { phone: adminPhone } }) !== null;
+    }
+  }
+
   // Create college admin user
   const admin = await prisma.user.create({
     data: {
       email,
+      username,
       password: hashedPassword,
       name,
-      phone: phone || null,
+      phone: adminPhone,
       collegeId,
+      batch: "2024-2028", // Default batch for admins
       role: "college_admin",
+      emailVerified: true,
+      phoneVerified: true,
+      verifiedStatus: "approved",
+      bypassVerified: true,
     },
     select: {
       id: true,

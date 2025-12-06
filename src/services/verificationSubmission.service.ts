@@ -184,6 +184,13 @@ export const uploadFaceImage = async (userId: string, faceImageUrl: string) => {
       rejectedAt: status === "rejected" ? new Date() : null,
       reviewedBy: status === "approved" ? "system" : null,
     },
+    include: {
+      user: {
+        include: {
+          college: true,
+        },
+      },
+    },
   });
 
   // Update user verification status
