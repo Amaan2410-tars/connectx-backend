@@ -37,43 +37,87 @@ export const getPendingVerifications = async (collegeId: string) => {
 
 // Get all pending verifications across all colleges (for super admin)
 export const getAllPendingVerifications = async () => {
-  // Use basic Prisma query with only fields that definitely exist
-  const verifications = await prisma.verification.findMany({
-    where: {
-      status: "pending",
-      user: {
-        role: "student",
+  try {
+    // Try to get verifications with all fields including course
+    const verifications = await prisma.verification.findMany({
+      where: {
+        status: "pending",
+        user: {
+          role: "student",
+        },
       },
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          batch: true,
-          collegeId: true,
-          courseId: true,
-          college: {
-            select: {
-              id: true,
-              name: true,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            batch: true,
+            collegeId: true,
+            courseId: true,
+            college: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
-          },
-          course: {
-            select: {
-              id: true,
-              name: true,
+            course: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  return verifications;
+    return verifications;
+  } catch (error: any) {
+    // If courseId or course doesn't exist, fallback to query without course
+    if (error.message?.includes("does not exist") || error.message?.includes("column") || error.message?.includes("Unknown arg")) {
+      const verifications = await prisma.verification.findMany({
+        where: {
+          status: "pending",
+          user: {
+            role: "student",
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              batch: true,
+              collegeId: true,
+              college: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Add null course fields for compatibility
+      return verifications.map(v => ({
+        ...v,
+        user: {
+          ...v.user,
+          courseId: null,
+          course: null,
+        },
+      }));
+    }
+    throw error;
+  }
 };
 
 export const approveVerification = async (
