@@ -139,9 +139,28 @@ export const loginUser = async (data: LoginInput) => {
     throw new Error("Email and password are required");
   }
 
-  // Find user
+  // Find user - use minimal select to avoid schema mismatch errors
+  // If new verification fields don't exist yet, this will still work
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase().trim() },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      phone: true,
+      password: true,
+      role: true,
+      collegeId: true,
+      batch: true,
+      avatar: true,
+      banner: true,
+      verifiedStatus: true,
+      points: true,
+      coins: true,
+      isPremium: true,
+      createdAt: true,
+    },
   });
 
   if (!user) {
