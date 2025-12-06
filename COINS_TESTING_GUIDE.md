@@ -288,3 +288,4 @@ SELECT id, name, email, coins FROM "User";
 4. Add analytics for coin usage
 5. Add coin expiration/redemption features
 
+

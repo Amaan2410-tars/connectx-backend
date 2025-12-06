@@ -63,3 +63,4 @@ openssl rand -base64 32
    - Annual: ₹278/year
 4. Copy Plan IDs to environment variables
 
+
