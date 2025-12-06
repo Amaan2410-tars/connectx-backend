@@ -1,4 +1,5 @@
 import prisma from "../config/prisma";
+import { Prisma } from "@prisma/client";
 import { SubmitVerificationInput } from "../utils/validators/verificationSubmission.validators";
 
 // Placeholder function to extract college name from ID card image
@@ -277,21 +278,41 @@ export const submitVerification = async (
 };
 
 export const getVerificationStatus = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      verifications: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
-  });
+  // Use raw query to handle potential schema mismatches
+  const userResult = await prisma.$queryRaw<Array<{
+    id: string;
+    emailVerified: boolean | null;
+    phoneVerified: boolean | null;
+    verifiedStatus: string | null;
+    bypassVerified: boolean | null;
+  }>>(
+    Prisma.sql`
+      SELECT 
+        id,
+        COALESCE("emailVerified", false) as "emailVerified",
+        COALESCE("phoneVerified", false) as "phoneVerified",
+        "verifiedStatus",
+        COALESCE("bypassVerified", false) as "bypassVerified"
+      FROM "User"
+      WHERE id = ${userId}
+      LIMIT 1
+    `
+  );
 
-  if (!user) {
+  if (!userResult || userResult.length === 0) {
     throw new Error("User not found");
   }
 
-  const latestVerification = user.verifications[0] || null;
+  const user = userResult[0];
+
+  // Get latest verification
+  const verifications = await prisma.verification.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 1,
+  });
+
+  const latestVerification = verifications[0] || null;
 
   // Check if user can retry verification (3 hours after rejection)
   let canRetry = true;
@@ -308,10 +329,10 @@ export const getVerificationStatus = async (userId: string) => {
   return {
     user: {
       id: user.id,
-      emailVerified: user.emailVerified,
-      phoneVerified: user.phoneVerified,
-      verifiedStatus: user.verifiedStatus,
-      bypassVerified: user.bypassVerified,
+      emailVerified: user.emailVerified || false,
+      phoneVerified: user.phoneVerified || false,
+      verifiedStatus: user.verifiedStatus || "pending",
+      bypassVerified: user.bypassVerified || false,
     },
     verification: latestVerification,
     canRetry,

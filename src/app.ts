@@ -24,6 +24,9 @@ import { authLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
+// Trust proxy for rate limiting behind Render's proxy
+app.set('trust proxy', true);
+
 // CORS configuration
 const getAllowedOrigins = (): string[] | string | boolean => {
   const frontendUrl = process.env.FRONTEND_URL;

@@ -127,29 +127,39 @@ export const verifiedStudentOnly = async (
       return next(error);
     }
 
-    // Check verification status
+    // Check verification status using raw query to handle missing columns gracefully
     const prisma = (await import("../config/prisma")).default;
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        emailVerified: true,
-        phoneVerified: true,
-        verifiedStatus: true,
-        bypassVerified: true,
-      },
-    });
+    
+    // Use raw query to handle potential schema mismatches
+    const userResult = await prisma.$queryRaw<Array<{
+      emailVerified: boolean | null;
+      phoneVerified: boolean | null;
+      verifiedStatus: string | null;
+      bypassVerified: boolean | null;
+    }>>`
+      SELECT 
+        "emailVerified",
+        "phoneVerified",
+        "verifiedStatus",
+        "bypassVerified"
+      FROM "User"
+      WHERE id = ${req.user.userId}
+      LIMIT 1
+    `;
 
-    if (!user) {
+    if (!userResult || userResult.length === 0) {
       const error: AppError = new Error("User not found");
       error.statusCode = 404;
       return next(error);
     }
 
+    const user = userResult[0];
+
     // Check if user is fully verified
     const isVerified =
-      user.emailVerified &&
-      user.phoneVerified &&
-      (user.verifiedStatus === "approved" || user.bypassVerified);
+      (user.emailVerified === true) &&
+      (user.phoneVerified === true) &&
+      (user.verifiedStatus === "approved" || user.bypassVerified === true);
 
     if (!isVerified) {
       const error: AppError = new Error(

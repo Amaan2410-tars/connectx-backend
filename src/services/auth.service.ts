@@ -212,39 +212,77 @@ export const loginUser = async (data: LoginInput) => {
   };
 };
 
-// Get user by ID
+// Get user by ID - using raw query to handle schema mismatches
 export const getUserById = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      email: true,
-      phone: true,
-      role: true,
-      collegeId: true,
-      batch: true,
-      avatar: true,
-      banner: true,
-      verifiedStatus: true,
-      points: true,
-      createdAt: true,
-      college: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          logo: true,
-        },
-      },
-    },
-  });
+  // Use raw query to handle potential missing columns
+  const users = await prisma.$queryRaw<Array<{
+    id: string;
+    name: string;
+    username: string;
+    email: string;
+    phone: string | null;
+    role: string;
+    collegeId: string | null;
+    batch: string | null;
+    avatar: string | null;
+    banner: string | null;
+    verifiedStatus: string;
+    emailVerified: boolean | null;
+    phoneVerified: boolean | null;
+    points: number;
+    createdAt: Date;
+    college_id: string | null;
+    college_name: string | null;
+    college_slug: string | null;
+    college_logo: string | null;
+  }>>(
+    Prisma.sql`
+      SELECT 
+        u.id, u.name, u.username, u.email, u.phone, u.role,
+        u."collegeId", u.batch, u.avatar, u.banner,
+        u."verifiedStatus", 
+        COALESCE(u."emailVerified", false) as "emailVerified",
+        COALESCE(u."phoneVerified", false) as "phoneVerified",
+        u.points, u."createdAt",
+        c.id as college_id,
+        c.name as college_name,
+        c.slug as college_slug,
+        c.logo as college_logo
+      FROM "User" u
+      LEFT JOIN "College" c ON u."collegeId" = c.id
+      WHERE u.id = ${userId}
+      LIMIT 1
+    `
+  );
 
-  if (!user) {
+  if (!users || users.length === 0) {
     throw new Error("User not found");
   }
 
-  return user;
+  const user = users[0];
+
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    phone: user.phone,
+    role: user.role as Role,
+    collegeId: user.collegeId,
+    batch: user.batch,
+    avatar: user.avatar,
+    banner: user.banner,
+    verifiedStatus: user.verifiedStatus as any,
+    emailVerified: user.emailVerified || false,
+    phoneVerified: user.phoneVerified || false,
+    points: user.points,
+    createdAt: user.createdAt,
+    college: user.college_id ? {
+      id: user.college_id,
+      name: user.college_name,
+      slug: user.college_slug,
+      logo: user.college_logo,
+    } : null,
+  };
 };
 
