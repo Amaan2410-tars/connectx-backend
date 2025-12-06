@@ -31,19 +31,24 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
+    console.log("🔐 Login attempt for email:", req.body.email);
     const result = await loginUser(req.body);
+    console.log("✅ Login successful for:", req.body.email);
     res.status(200).json({
       success: true,
       message: "Login successful",
       data: result,
     });
   } catch (error) {
+    console.error("❌ Login error:", error);
     if (error instanceof Error) {
-      const appError: AppError = error;
+      const appError: AppError = new Error(error.message || "Invalid email or password");
       appError.statusCode = 401;
       next(appError);
     } else {
-      next(error);
+      const appError: AppError = new Error("Invalid email or password");
+      appError.statusCode = 401;
+      next(appError);
     }
   }
 };

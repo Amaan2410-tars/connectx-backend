@@ -135,21 +135,36 @@ export const signupUser = async (data: SignupInput) => {
 export const loginUser = async (data: LoginInput) => {
   const { email, password } = data;
 
+  if (!email || !password) {
+    throw new Error("Email and password are required");
+  }
+
   // Find user
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: email.toLowerCase().trim() },
   });
 
   if (!user) {
+    console.log("❌ User not found for email:", email);
     throw new Error("Invalid email or password");
   }
 
+  console.log("👤 User found:", user.email, "Role:", user.role);
+
   // Verify password
+  if (!user.password) {
+    console.log("❌ User has no password set");
+    throw new Error("Invalid email or password");
+  }
+
   const isPasswordValid = await comparePassword(password, user.password);
 
   if (!isPasswordValid) {
+    console.log("❌ Password mismatch for user:", user.email);
     throw new Error("Invalid email or password");
   }
+
+  console.log("✅ Password verified for user:", user.email);
 
   // Generate tokens
   const accessToken = generateAccessToken(user.id, user.role);
