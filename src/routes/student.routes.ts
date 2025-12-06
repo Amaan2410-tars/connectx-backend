@@ -47,6 +47,10 @@ import {
   getClubByIdHandler,
   joinClubHandler,
   leaveClubHandler,
+  getMyClubsHandler,
+  updateClubHandler,
+  deleteClubHandler,
+  removeMemberHandler,
 } from "../controllers/studentClub.controller";
 import {
   getEventsHandler,

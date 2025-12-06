@@ -35,8 +35,14 @@ export const searchHandler = async (
       collegeId = user?.collegeId || undefined;
     }
 
-    const searchLimit = typeof limit === "string" ? parseInt(limit) : limit;
-    const searchCursor = typeof cursor === "string" ? cursor : undefined;
+    // Parse limit and cursor with proper type checking
+    const searchLimit: number = typeof limit === "string" 
+      ? parseInt(limit, 10) 
+      : typeof limit === "number" 
+      ? limit 
+      : 20;
+    
+    const searchCursor: string | undefined = typeof cursor === "string" ? cursor : undefined;
 
     let result;
 
