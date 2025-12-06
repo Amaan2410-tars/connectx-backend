@@ -3,6 +3,7 @@ import {
   createCollegeAdmin,
   deleteUser,
   deletePost,
+  getAllCollegeAdmins,
 } from "../services/admin.service";
 import { getSuperAdminAnalytics } from "../services/analytics.service";
 import { AppError } from "../middleware/errorHandler";
@@ -89,6 +90,28 @@ export const getAnalyticsHandler = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const getAllCollegeAdminsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const admins = await getAllCollegeAdmins();
+    res.status(200).json({
+      success: true,
+      data: admins,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = 400;
+      next(appError);
+    } else {
+      next(error);
+    }
   }
 };
 

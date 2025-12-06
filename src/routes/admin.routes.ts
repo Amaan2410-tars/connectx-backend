@@ -23,6 +23,7 @@ import {
   deleteUserHandler,
   deletePostHandler,
   getAnalyticsHandler,
+  getAllCollegeAdminsHandler,
 } from "../controllers/admin.controller";
 import {
   getAllPendingVerificationsHandler,
@@ -43,8 +44,9 @@ router.get("/colleges/:id", validate(collegeParamsSchema), getCollegeByIdHandler
 router.put("/colleges/:id", validate(updateCollegeSchema), updateCollegeHandler);
 router.delete("/colleges/:id", validate(collegeParamsSchema), deleteCollegeHandler);
 
-// College Admin Creation
+// College Admin Management
 router.post("/college-admins", validate(createCollegeAdminSchema), createCollegeAdminHandler);
+router.get("/college-admins", getAllCollegeAdminsHandler);
 
 // Delete Operations
 router.delete("/users/:id", validate(deleteUserSchema), deleteUserHandler);

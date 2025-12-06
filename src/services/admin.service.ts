@@ -1,6 +1,7 @@
 import prisma from "../config/prisma";
 import { hashPassword } from "./auth.service";
 import { CreateCollegeAdminInput } from "../utils/validators/admin.validators";
+import { Prisma } from "@prisma/client";
 
 export const createCollegeAdmin = async (data: CreateCollegeAdminInput) => {
   const { email, password, name, phone, collegeId } = data;
@@ -131,5 +132,46 @@ export const deletePost = async (postId: string) => {
   });
 
   return { message: "Post deleted successfully" };
+};
+
+// Get all college admins
+export const getAllCollegeAdmins = async () => {
+  // Use raw query to avoid schema mismatch
+  const admins = await prisma.$queryRaw<Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    collegeId: string;
+    createdAt: Date;
+    college: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+  }>>(
+    Prisma.sql`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone,
+        u."collegeId",
+        u."createdAt",
+        CASE 
+          WHEN c.id IS NOT NULL THEN json_build_object('id', c.id, 'name', c.name, 'slug', c.slug)
+          ELSE NULL
+        END as college
+      FROM "User" u
+      LEFT JOIN "College" c ON u."collegeId" = c.id
+      WHERE u.role = 'college_admin'
+      ORDER BY u."createdAt" DESC
+    `
+  );
+
+  return admins.map(admin => ({
+    ...admin,
+    college: typeof admin.college === 'string' ? JSON.parse(admin.college) : admin.college,
+  }));
 };
 

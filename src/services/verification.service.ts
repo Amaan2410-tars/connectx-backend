@@ -1,4 +1,5 @@
 import prisma from "../config/prisma";
+import { Prisma } from "@prisma/client";
 
 export const getPendingVerifications = async (collegeId: string) => {
   const verifications = await prisma.verification.findMany({
@@ -36,6 +37,7 @@ export const getPendingVerifications = async (collegeId: string) => {
 
 // Get all pending verifications across all colleges (for super admin)
 export const getAllPendingVerifications = async () => {
+  // Use basic Prisma query with only fields that definitely exist
   const verifications = await prisma.verification.findMany({
     where: {
       status: "pending",
@@ -51,9 +53,7 @@ export const getAllPendingVerifications = async () => {
           email: true,
           phone: true,
           batch: true,
-          emailVerified: true,
-          phoneVerified: true,
-          bypassVerified: true,
+          collegeId: true,
           college: {
             select: {
               id: true,
