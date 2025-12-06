@@ -3,7 +3,11 @@ import jwt from "jsonwebtoken";
 import { AppError } from "./errorHandler";
 import { Role } from "@prisma/client";
 
-const JWT_SECRET = process.env.JWT_SECRET || "connectx_jwt_secret";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET environment variable is required in production");
+}
+const FALLBACK_SECRET = "connectx_jwt_secret_dev_only"; // Only for development
 
 export interface AuthPayload {
   userId: string;
@@ -27,7 +31,8 @@ export const authRequired = (
     const token = authHeader.substring(7); // Remove "Bearer " prefix
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+      const secret = JWT_SECRET || FALLBACK_SECRET;
+      const decoded = jwt.verify(token, secret) as AuthPayload;
       req.user = {
         userId: decoded.userId,
         role: decoded.role,

@@ -7,7 +7,14 @@ import {
   createPostSchema,
   postParamsSchema,
   commentSchema,
+  updatePostSchema,
+  commentParamsSchema,
+  updateCommentSchema,
 } from "../utils/validators/post.validators";
+import {
+  updateClubSchema,
+  removeMemberSchema,
+} from "../utils/validators/club.validators";
 import { submitVerificationSchema } from "../utils/validators/verificationSubmission.validators";
 import { clubParamsSchema } from "../utils/validators/club.validators";
 import { eventParamsSchema } from "../utils/validators/event.validators";
@@ -23,6 +30,10 @@ import {
   unlikePostHandler,
   commentOnPostHandler,
   getPostCommentsHandler,
+  updatePostHandler,
+  deletePostHandler,
+  updateCommentHandler,
+  deleteCommentHandler,
 } from "../controllers/post.controller";
 import {
   submitVerificationHandler,
@@ -51,6 +62,7 @@ import {
   getCouponByIdHandler,
   redeemCouponHandler,
 } from "../controllers/reward.controller";
+import { getStudentAnnouncementsHandler } from "../controllers/announcement.controller";
 
 const router = Router();
 
@@ -74,16 +86,24 @@ router.put("/profile", uploadLimiter, uploadProfileImages, validate(updateProfil
 // Posts
 router.post("/posts", postLimiter, uploadPostImage, validate(createPostSchema), createPostHandler);
 router.get("/posts/feed", getFeedHandler);
+router.put("/posts/:id", postLimiter, uploadPostImage, validate(updatePostSchema), updatePostHandler);
+router.delete("/posts/:id", validate(postParamsSchema), deletePostHandler);
 router.post("/posts/:id/like", likeLimiter, validate(postParamsSchema), likePostHandler);
 router.delete("/posts/:id/like", validate(postParamsSchema), unlikePostHandler);
 router.post("/posts/:id/comments", commentLimiter, validate(commentSchema), commentOnPostHandler);
 router.get("/posts/:id/comments", validate(postParamsSchema), getPostCommentsHandler);
+router.put("/comments/:id", validate(updateCommentSchema), updateCommentHandler);
+router.delete("/comments/:id", validate(commentParamsSchema), deleteCommentHandler);
 
 // Clubs
 router.get("/clubs", getClubsHandler);
+router.get("/clubs/my", getMyClubsHandler);
 router.get("/clubs/:id", validate(clubParamsSchema), getClubByIdHandler);
+router.put("/clubs/:id", validate(updateClubSchema), updateClubHandler);
+router.delete("/clubs/:id", validate(clubParamsSchema), deleteClubHandler);
 router.post("/clubs/:id/join", validate(clubParamsSchema), joinClubHandler);
 router.delete("/clubs/:id/leave", validate(clubParamsSchema), leaveClubHandler);
+router.delete("/clubs/:id/members/:memberId", validate(removeMemberSchema), removeMemberHandler);
 
 // Events
 router.get("/events", getEventsHandler);
@@ -98,6 +118,9 @@ router.post("/rewards/:id/redeem", validate(rewardParamsSchema), redeemRewardHan
 router.get("/coupons", getCouponsHandler);
 router.get("/coupons/:id", validate(couponParamsSchema), getCouponByIdHandler);
 router.post("/coupons/:id/redeem", validate(couponParamsSchema), redeemCouponHandler);
+
+// Announcements
+router.get("/announcements", getStudentAnnouncementsHandler);
 
 export default router;
 

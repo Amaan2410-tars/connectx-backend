@@ -54,7 +54,9 @@ We reserve the right to modify these terms at any time. Continued use constitute
 
 ## Contact
 
-For questions about these Terms, please contact us at support@connectx.com
+For questions about these Terms, please contact us at:
+- **Email**: amaan@tarslab.in
+- **Phone**: +91 8790492138
         `.trim(),
       },
     });
@@ -134,7 +136,9 @@ We may update this Privacy Policy from time to time. We will notify you of chang
 
 ## Contact
 
-For privacy concerns, contact us at privacy@connectx.com
+For privacy concerns, contact us at:
+- **Email**: amaan@tarslab.in
+- **Phone**: +91 8790492138
         `.trim(),
       },
     });
@@ -202,11 +206,13 @@ You will receive email confirmation for:
 If you experience any issues accessing your purchased services:
 1. Check your account status in the app
 2. Verify payment was successful
-3. Contact support@connectx.com with your order details
+3. Contact amaan@tarslab.in with your order details
 
 ## Contact
 
-For shipping-related inquiries, contact us at support@connectx.com
+For shipping-related inquiries, contact us at:
+- **Email**: amaan@tarslab.in
+- **Phone**: +91 8790492138
         `.trim(),
       },
     });
@@ -235,11 +241,16 @@ We're here to help! Reach out to us through any of the following channels:
 
 ## Email Support
 
-- **General Inquiries**: support@connectx.com
-- **Premium Subscription Support**: premium@connectx.com
-- **Payment & Billing**: billing@connectx.com
-- **Privacy Concerns**: privacy@connectx.com
-- **Technical Support**: tech@connectx.com
+- **General Inquiries**: amaan@tarslab.in
+- **Premium Subscription Support**: amaan@tarslab.in
+- **Payment & Billing**: amaan@tarslab.in
+- **Privacy Concerns**: amaan@tarslab.in
+- **Technical Support**: amaan@tarslab.in
+
+## Phone Support
+
+- **Contact Number**: +91 8790492138
+- **Available**: Monday - Saturday, 9:00 AM - 6:00 PM IST
 
 ## Response Time
 
@@ -257,14 +268,14 @@ Our support team is available:
 
 ## Office Address
 
-ConnectX Technologies
-[Your Business Address]
-[City, State, PIN Code]
+TARS Lab
 India
 
 ## Phone Support
 
-For urgent matters, please email us with "URGENT" in the subject line, and we'll prioritize your request.
+- **Phone**: +91 8790492138
+- **Available**: Monday - Saturday, 9:00 AM - 6:00 PM IST
+- For urgent matters, please call or email with "URGENT" in the subject line, and we'll prioritize your request.
 
 ## Social Media
 
@@ -316,7 +327,7 @@ export const getCancellationAndRefunds = async (
 
 You can cancel your premium subscription at any time:
 - Through your account settings in the app
-- By contacting support@connectx.com
+- By contacting amaan@tarslab.in
 - Through the subscription management page
 
 ### Cancellation Effect
@@ -344,7 +355,7 @@ You can cancel your premium subscription at any time:
 
 ### Requesting a Refund
 
-1. Contact billing@connectx.com with:
+1. Contact amaan@tarslab.in with:
    - Your account email
    - Transaction ID or order number
    - Reason for refund request
@@ -378,7 +389,8 @@ If you initiate a chargeback:
 ## 6. Disputes
 
 For payment disputes:
-- Contact billing@connectx.com immediately
+- Contact amaan@tarslab.in immediately
+- Call +91 8790492138 for urgent matters
 - Provide transaction details
 - We will investigate and respond within 48 hours
 
@@ -387,20 +399,23 @@ For payment disputes:
 ### Technical Errors
 
 If you experience technical issues preventing service access:
-- Contact tech@connectx.com
+- Contact amaan@tarslab.in
+- Call +91 8790492138 for urgent matters
 - We will investigate and provide appropriate resolution
 - May include service extension or refund
 
 ### Fraudulent Transactions
 
 If you notice unauthorized charges:
-- Contact billing@connectx.com immediately
+- Contact amaan@tarslab.in immediately
+- Call +91 8790492138 for urgent matters
 - We will investigate and process refunds if confirmed
 - May require additional verification
 
 ## 8. Contact for Refunds
 
-**Email**: billing@connectx.com
+**Email**: amaan@tarslab.in
+**Phone**: +91 8790492138
 **Subject**: Refund Request - [Your Transaction ID]
 
 ## 9. Changes to Policy

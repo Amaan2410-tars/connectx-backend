@@ -6,6 +6,10 @@ import {
   unlikePost,
   commentOnPost,
   getPostComments,
+  updatePost,
+  deletePostByOwner,
+  updateComment,
+  deleteComment,
 } from "../services/post.service";
 import { AppError } from "../middleware/errorHandler";
 import { processUploadedFile } from "../services/fileUpload.service";
@@ -163,13 +167,140 @@ export const getPostCommentsHandler = async (
   try {
     const { id } = req.params;
     const limit = parseInt(req.query.limit as string) || 20;
-    const comments = await getPostComments(id, limit);
+    const cursor = req.query.cursor as string | undefined;
+    const result = await getPostComments(id, limit, cursor);
     res.status(200).json({
       success: true,
-      data: comments,
+      data: result,
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const updatePostHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    
+    // Check if image was uploaded
+    let imageUrl = req.body.image;
+    if (req.file) {
+      const uploadedFile = processUploadedFile(req.file);
+      imageUrl = uploadedFile.url;
+    }
+
+    const post = await updatePost(req.user.userId, id, {
+      caption: req.body.caption,
+      image: imageUrl,
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: "Post updated successfully",
+      data: post,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = error.message === "Post not found" || error.message === "You can only edit your own posts" ? 404 : 400;
+      next(appError);
+    } else {
+      next(error);
+    }
+  }
+};
+
+export const deletePostHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const result = await deletePostByOwner(req.user.userId, id);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = error.message === "Post not found" || error.message === "You can only delete your own posts" ? 404 : 400;
+      next(appError);
+    } else {
+      next(error);
+    }
+  }
+};
+
+export const updateCommentHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const { text } = req.body;
+    const comment = await updateComment(req.user.userId, id, text);
+    
+    res.status(200).json({
+      success: true,
+      message: "Comment updated successfully",
+      data: comment,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = error.message === "Comment not found" || error.message === "You can only edit your own comments" ? 404 : 400;
+      next(appError);
+    } else {
+      next(error);
+    }
+  }
+};
+
+export const deleteCommentHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { id } = req.params;
+    const result = await deleteComment(req.user.userId, id);
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = error.message === "Comment not found" || error.message === "You can only delete your own comments" ? 404 : 400;
+      next(appError);
+    } else {
+      next(error);
+    }
   }
 };
 

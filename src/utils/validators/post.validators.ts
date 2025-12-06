@@ -22,5 +22,31 @@ export const commentSchema = z.object({
   }),
 });
 
+export const commentParamsSchema = z.object({
+  params: z.object({
+    id: z.string().min(1, "Comment ID is required"),
+  }),
+});
+
+export const updateCommentSchema = z.object({
+  body: z.object({
+    text: z.string().min(1, "Comment text is required"),
+  }),
+  params: z.object({
+    id: z.string().min(1, "Comment ID is required"),
+  }),
+});
+
+export const updatePostSchema = z.object({
+  body: z.object({
+    caption: z.string().optional(),
+    image: z.string().url("Invalid image URL").optional(),
+  }),
+  params: z.object({
+    id: z.string().min(1, "Post ID is required"),
+  }),
+});
+
 export type CreatePostInput = z.infer<typeof createPostSchema>["body"];
+export type UpdatePostInput = z.infer<typeof updatePostSchema>["body"];
 

@@ -4,6 +4,7 @@ import {
   deleteUser,
   deletePost,
   getAllCollegeAdmins,
+  getAllUsers,
 } from "../services/admin.service";
 import { getSuperAdminAnalytics } from "../services/analytics.service";
 import { AppError } from "../middleware/errorHandler";
@@ -112,6 +113,25 @@ export const getAllCollegeAdminsHandler = async (
     } else {
       next(error);
     }
+  }
+};
+
+export const getAllUsersHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const cursor = req.query.cursor as string | undefined;
+    
+    const result = await getAllUsers(limit, cursor);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 

@@ -175,3 +175,53 @@ export const getAllCollegeAdmins = async () => {
   }));
 };
 
+// Get all users (for super admin)
+export const getAllUsers = async (limit: number = 50, cursor?: string) => {
+  const where = cursor ? { id: { gt: cursor } } : {};
+  
+  const users = await prisma.user.findMany({
+    where,
+    take: limit + 1,
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      phone: true,
+      role: true,
+      collegeId: true,
+      batch: true,
+      verifiedStatus: true,
+      points: true,
+      coins: true,
+      isPremium: true,
+      createdAt: true,
+      college: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+      _count: {
+        select: {
+          posts: true,
+          eventsRSVP: true,
+          clubs: true,
+        },
+      },
+    },
+  });
+
+  const hasMore = users.length > limit;
+  const data = hasMore ? users.slice(0, limit) : users;
+  const nextCursor = hasMore ? data[data.length - 1].id : undefined;
+
+  return {
+    users: data,
+    nextCursor,
+    hasMore,
+  };
+};
+

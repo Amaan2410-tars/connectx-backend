@@ -100,3 +100,141 @@ export const getClubById = async (clubId: string) => {
   return club;
 };
 
+export const updateClub = async (clubId: string, userId: string, data: { name?: string; description?: string; isPremiumOnly?: boolean }) => {
+  // Check if club exists and user is admin
+  const club = await prisma.club.findUnique({
+    where: { id: clubId },
+    select: { adminId: true, collegeId: true },
+  });
+
+  if (!club) {
+    throw new Error("Club not found");
+  }
+
+  // Allow college admin or club admin
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, collegeId: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isClubAdmin = club.adminId === userId;
+  const isCollegeAdmin = user.role === "college_admin" && user.collegeId === club.collegeId;
+
+  if (!isClubAdmin && !isCollegeAdmin) {
+    throw new Error("Only club admin or college admin can update this club");
+  }
+
+  const updatedClub = await prisma.club.update({
+    where: { id: clubId },
+    data: {
+      name: data.name,
+      description: data.description,
+      isPremiumOnly: data.isPremiumOnly,
+    },
+    include: {
+      college: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      _count: {
+        select: {
+          members: true,
+        },
+      },
+    },
+  });
+
+  return updatedClub;
+};
+
+export const deleteClub = async (clubId: string, userId: string) => {
+  // Check if club exists and user is admin
+  const club = await prisma.club.findUnique({
+    where: { id: clubId },
+    select: { adminId: true, collegeId: true },
+  });
+
+  if (!club) {
+    throw new Error("Club not found");
+  }
+
+  // Allow college admin or club admin
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, collegeId: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const isClubAdmin = club.adminId === userId;
+  const isCollegeAdmin = user.role === "college_admin" && user.collegeId === club.collegeId;
+
+  if (!isClubAdmin && !isCollegeAdmin) {
+    throw new Error("Only club admin or college admin can delete this club");
+  }
+
+  await prisma.club.delete({
+    where: { id: clubId },
+  });
+
+  return { message: "Club deleted successfully" };
+};
+
+export const getMyClubs = async (userId: string) => {
+  const clubs = await prisma.club.findMany({
+    where: { adminId: userId },
+    include: {
+      college: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      _count: {
+        select: {
+          members: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return clubs;
+};
+
+export const removeMember = async (clubId: string, memberId: string, adminId: string) => {
+  // Check if user is club admin
+  const club = await prisma.club.findUnique({
+    where: { id: clubId },
+    select: { adminId: true },
+  });
+
+  if (!club) {
+    throw new Error("Club not found");
+  }
+
+  if (club.adminId !== adminId) {
+    throw new Error("Only club admin can remove members");
+  }
+
+  // Remove member from club
+  await prisma.user.update({
+    where: { id: memberId },
+    data: {
+      clubs: {
+        disconnect: { id: clubId },
+      },
+    },
+  });
+
+  return { message: "Member removed successfully" };
+};
+

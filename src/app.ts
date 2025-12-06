@@ -14,6 +14,7 @@ import uploadRoutes from "./routes/upload.routes";
 import coinRoutes from "./routes/coins.routes";
 import premiumRoutes from "./routes/premium.routes";
 import legalRoutes from "./routes/legal.routes";
+import searchRoutes from "./routes/search.routes";
 import { premiumWebhookHandler } from "./controllers/premium.controller";
 // Direct controller imports for alternative route registration
 import { signup, login } from "./controllers/auth.controller";
@@ -70,8 +71,7 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting (applied to all routes)
-// Temporarily disabled for debugging - re-enable after fixing routes
-// app.use("/api", apiLimiter);
+app.use("/api", apiLimiter);
 
 // Serve uploaded files statically
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -161,6 +161,10 @@ try {
   // Legal pages (public, no auth required)
   app.use("/api/legal", legalRoutes);
   console.log("✅ Registered: /api/legal");
+
+  // Search (requires auth)
+  app.use("/api/search", searchRoutes);
+  console.log("✅ Registered: /api/search");
   
   // Webhook route (no auth required)
   app.post("/api/premium/webhook", premiumWebhookHandler);

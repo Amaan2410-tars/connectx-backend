@@ -180,10 +180,17 @@ export const commentOnPost = async (userId: string, postId: string, text: string
   return comment;
 };
 
-export const getPostComments = async (postId: string, limit: number = 20) => {
+export const getPostComments = async (postId: string, limit: number = 20, cursor?: string) => {
+  const where = cursor
+    ? {
+        postId,
+        id: { lt: cursor },
+      }
+    : { postId };
+
   const comments = await prisma.comment.findMany({
-    where: { postId },
-    take: limit,
+    where,
+    take: limit + 1,
     orderBy: { createdAt: "desc" },
     include: {
       user: {
@@ -196,6 +203,137 @@ export const getPostComments = async (postId: string, limit: number = 20) => {
     },
   });
 
-  return comments;
+  let nextCursor: string | undefined = undefined;
+  let hasMore = false;
+  
+  if (comments.length > limit) {
+    const nextItem = comments.pop();
+    nextCursor = nextItem?.id;
+    hasMore = true;
+  }
+
+  return {
+    comments,
+    nextCursor,
+    hasMore,
+  };
+};
+
+export const updatePost = async (userId: string, postId: string, data: { caption?: string; image?: string }) => {
+  // Check if post exists and belongs to user
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { userId: true },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  if (post.userId !== userId) {
+    throw new Error("You can only edit your own posts");
+  }
+
+  const updatedPost = await prisma.post.update({
+    where: { id: postId },
+    data: {
+      caption: data.caption !== undefined ? data.caption : undefined,
+      image: data.image !== undefined ? data.image : undefined,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+        },
+      },
+      _count: {
+        select: {
+          likes: true,
+          comments: true,
+        },
+      },
+    },
+  });
+
+  return updatedPost;
+};
+
+export const deletePostByOwner = async (userId: string, postId: string) => {
+  // Check if post exists and belongs to user
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { userId: true },
+  });
+
+  if (!post) {
+    throw new Error("Post not found");
+  }
+
+  if (post.userId !== userId) {
+    throw new Error("You can only delete your own posts");
+  }
+
+  // Delete post (cascade will handle likes and comments)
+  await prisma.post.delete({
+    where: { id: postId },
+  });
+
+  return { message: "Post deleted successfully" };
+};
+
+export const updateComment = async (userId: string, commentId: string, text: string) => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { userId: true },
+  });
+
+  if (!comment) {
+    throw new Error("Comment not found");
+  }
+
+  if (comment.userId !== userId) {
+    throw new Error("You can only edit your own comments");
+  }
+
+  const updatedComment = await prisma.comment.update({
+    where: { id: commentId },
+    data: { text },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+        },
+      },
+    },
+  });
+
+  return updatedComment;
+};
+
+export const deleteComment = async (userId: string, commentId: string) => {
+  // Check if comment exists and belongs to user
+  const comment = await prisma.comment.findUnique({
+    where: { id: commentId },
+    select: { userId: true },
+  });
+
+  if (!comment) {
+    throw new Error("Comment not found");
+  }
+
+  if (comment.userId !== userId) {
+    throw new Error("You can only delete your own comments");
+  }
+
+  await prisma.comment.delete({
+    where: { id: commentId },
+  });
+
+  return { message: "Comment deleted successfully" };
 };
 

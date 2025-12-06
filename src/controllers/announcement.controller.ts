@@ -86,3 +86,38 @@ export const getAnnouncementsHandler = async (
   }
 };
 
+export const getStudentAnnouncementsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new Error("User not authenticated");
+    }
+
+    const student = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { collegeId: true },
+    });
+
+    if (!student || !student.collegeId) {
+      throw new Error("Student must be associated with a college");
+    }
+
+    const announcements = await getAnnouncements(student.collegeId);
+    res.status(200).json({
+      success: true,
+      data: announcements,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = 400;
+      next(appError);
+    } else {
+      next(error);
+    }
+  }
+};
+

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createClub, getClubsByCollege, getClubById } from "../services/club.service";
+import { createClub, getClubsByCollege, getClubById, updateClub, deleteClub, getMyClubs, removeMember } from "../services/club.service";
 import { AppError } from "../middleware/errorHandler";
 import prisma from "../config/prisma";
 
