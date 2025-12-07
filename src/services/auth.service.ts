@@ -232,75 +232,158 @@ export const loginUser = async (data: LoginInput) => {
 
 // Get user by ID - using raw query to handle schema mismatches
 export const getUserById = async (userId: string) => {
-  // Use raw query to handle potential missing columns
-  const users = await prisma.$queryRaw<Array<{
-    id: string;
-    name: string;
-    username: string;
-    email: string;
-    phone: string | null;
-    role: string;
-    collegeId: string | null;
-    batch: string | null;
-    avatar: string | null;
-    banner: string | null;
-    verifiedStatus: string;
-    emailVerified: boolean | null;
-    phoneVerified: boolean | null;
-    points: number;
-    createdAt: Date;
-    college_id: string | null;
-    college_name: string | null;
-    college_slug: string | null;
-    college_logo: string | null;
-  }>>(
-    Prisma.sql`
-      SELECT 
-        u.id, u.name, u.username, u.email, u.phone, u.role,
-        u."collegeId", u.batch, u.avatar, u.banner,
-        u."verifiedStatus", 
-        COALESCE(u."emailVerified", false) as "emailVerified",
-        COALESCE(u."phoneVerified", false) as "phoneVerified",
-        u.points, u."createdAt",
-        c.id as college_id,
-        c.name as college_name,
-        c.slug as college_slug,
-        c.logo as college_logo
-      FROM "User" u
-      LEFT JOIN "College" c ON u."collegeId" = c.id
-      WHERE u.id = ${userId}
-      LIMIT 1
-    `
-  );
+  try {
+    // Check which columns exist in User table first
+    const userColumns = await prisma.$queryRaw<Array<{ column_name: string }>>(
+      Prisma.sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'User' 
+        AND column_name IN ('emailVerified', 'phoneVerified', 'bypassVerified')
+        LIMIT 3
+      `
+    );
+    
+    const hasEmailVerified = userColumns.some(c => c.column_name === 'emailVerified');
+    const hasPhoneVerified = userColumns.some(c => c.column_name === 'phoneVerified');
+    
+    let users: Array<{
+      id: string;
+      name: string;
+      username: string;
+      email: string;
+      phone: string | null;
+      role: string;
+      collegeId: string | null;
+      batch: string | null;
+      avatar: string | null;
+      banner: string | null;
+      verifiedStatus: string;
+      emailVerified?: boolean | null;
+      phoneVerified?: boolean | null;
+      points: number;
+      createdAt: Date;
+      college_id: string | null;
+      college_name: string | null;
+      college_slug: string | null;
+      college_logo: string | null;
+    }>;
+    
+    if (hasEmailVerified && hasPhoneVerified) {
+      // All columns exist - use full query
+      users = await prisma.$queryRaw(
+        Prisma.sql`
+          SELECT 
+            u.id, u.name, u.username, u.email, u.phone, u.role,
+            u."collegeId", u.batch, u.avatar, u.banner,
+            u."verifiedStatus", 
+            COALESCE(u."emailVerified", false) as "emailVerified",
+            COALESCE(u."phoneVerified", false) as "phoneVerified",
+            u.points, u."createdAt",
+            c.id as college_id,
+            c.name as college_name,
+            c.slug as college_slug,
+            c.logo as college_logo
+          FROM "User" u
+          LEFT JOIN "College" c ON u."collegeId" = c.id
+          WHERE u.id = ${userId}
+          LIMIT 1
+        `
+      );
+    } else {
+      // Missing columns - use basic query
+      users = await prisma.$queryRaw(
+        Prisma.sql`
+          SELECT 
+            u.id, u.name, u.username, u.email, u.phone, u.role,
+            u."collegeId", u.batch, u.avatar, u.banner,
+            u."verifiedStatus", 
+            u.points, u."createdAt",
+            c.id as college_id,
+            c.name as college_name,
+            c.slug as college_slug,
+            c.logo as college_logo
+          FROM "User" u
+          LEFT JOIN "College" c ON u."collegeId" = c.id
+          WHERE u.id = ${userId}
+          LIMIT 1
+        `
+      );
+    }
 
-  if (!users || users.length === 0) {
-    throw new Error("User not found");
+    if (!users || users.length === 0) {
+      throw new Error("User not found");
+    }
+
+    const user = users[0];
+
+    return {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      role: user.role as Role,
+      collegeId: user.collegeId,
+      batch: user.batch,
+      avatar: user.avatar,
+      banner: user.banner,
+      verifiedStatus: user.verifiedStatus as any,
+      emailVerified: user.emailVerified ?? false,
+      phoneVerified: user.phoneVerified ?? false,
+      points: user.points,
+      createdAt: user.createdAt,
+      college: user.college_id ? {
+        id: user.college_id,
+        name: user.college_name,
+        slug: user.college_slug,
+        logo: user.college_logo,
+      } : null,
+    };
+  } catch (error: any) {
+    // Ultimate fallback - use Prisma's basic query
+    console.error("Error querying user with raw SQL, trying Prisma query:", error);
+    try {
+      const userData = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          phone: true,
+          role: true,
+          collegeId: true,
+          batch: true,
+          avatar: true,
+          banner: true,
+          verifiedStatus: true,
+          points: true,
+          createdAt: true,
+          college: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              logo: true,
+            },
+          },
+        },
+      });
+      
+      if (!userData) {
+        throw new Error("User not found");
+      }
+      
+      return {
+        ...userData,
+        emailVerified: false,
+        phoneVerified: false,
+      };
+    } catch (fallbackError: any) {
+      console.error("Fallback query also failed:", fallbackError);
+      throw new Error("Failed to fetch user data");
+    }
   }
-
-  const user = users[0];
-
-  return {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    phone: user.phone,
-    role: user.role as Role,
-    collegeId: user.collegeId,
-    batch: user.batch,
-    avatar: user.avatar,
-    banner: user.banner,
-    verifiedStatus: user.verifiedStatus as any,
-    emailVerified: user.emailVerified || false,
-    phoneVerified: user.phoneVerified || false,
-    points: user.points,
-    createdAt: user.createdAt,
-    college: user.college_id ? {
-      id: user.college_id,
-      name: user.college_name,
-      slug: user.college_slug,
-      logo: user.college_logo,
-    } : null,
-  };
 };
 

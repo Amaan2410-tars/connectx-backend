@@ -38,46 +38,71 @@ export const getPendingVerifications = async (collegeId: string) => {
 // Get all pending verifications across all colleges (for super admin)
 export const getAllPendingVerifications = async () => {
   try {
-    // Try to get verifications with all fields including course
-    const verifications = await prisma.verification.findMany({
-      where: {
-        status: "pending",
-        user: {
-          role: "student",
+    // Check if courseId column exists in User table
+    const userColumns = await prisma.$queryRaw<Array<{ column_name: string }>>(
+      Prisma.sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'User' 
+        AND column_name = 'courseId'
+        LIMIT 1
+      `
+    );
+    
+    const hasCourseId = userColumns.length > 0;
+    
+    // Check if Course table exists
+    const courseTable = await prisma.$queryRaw<Array<{ table_name: string }>>(
+      Prisma.sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'Course'
+        LIMIT 1
+      `
+    );
+    
+    const hasCourseTable = courseTable.length > 0;
+    
+    if (hasCourseId && hasCourseTable) {
+      // Course fields exist - use full query
+      const verifications = await prisma.verification.findMany({
+        where: {
+          status: "pending",
+          user: {
+            role: "student",
+          },
         },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            batch: true,
-            collegeId: true,
-            courseId: true,
-            college: {
-              select: {
-                id: true,
-                name: true,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              batch: true,
+              collegeId: true,
+              courseId: true,
+              college: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
-            },
-            course: {
-              select: {
-                id: true,
-                name: true,
+              course: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+      });
 
-    return verifications;
-  } catch (error: any) {
-    // If courseId or course doesn't exist, fallback to query without course
-    if (error.message?.includes("does not exist") || error.message?.includes("column") || error.message?.includes("Unknown arg")) {
+      return verifications;
+    } else {
+      // Course fields don't exist - use basic query
       const verifications = await prisma.verification.findMany({
         where: {
           status: "pending",
@@ -107,7 +132,7 @@ export const getAllPendingVerifications = async () => {
       });
 
       // Add null course fields for compatibility
-      return verifications.map(v => ({
+      return verifications.map((v: any) => ({
         ...v,
         user: {
           ...v.user,
@@ -116,7 +141,60 @@ export const getAllPendingVerifications = async () => {
         },
       }));
     }
-    throw error;
+  } catch (error: any) {
+    console.error("Error in getAllPendingVerifications:", error);
+    // Ultimate fallback - use raw SQL with only basic fields
+    try {
+      const verifications = await prisma.$queryRaw<Array<any>>(
+        Prisma.sql`
+          SELECT 
+            v.id, v."userId", v."idCardImage", v."faceImage", v.status,
+            v."matchScore", v."faceMatchScore", v."collegeMatch",
+            v."analysisRemarks", v."createdAt",
+            u.id as user_id, u.name as user_name, u.email as user_email,
+            u.phone as user_phone, u.batch as user_batch, u."collegeId" as user_collegeId,
+            c.id as college_id, c.name as college_name
+          FROM "Verification" v
+          INNER JOIN "User" u ON v."userId" = u.id
+          LEFT JOIN "College" c ON u."collegeId" = c.id
+          WHERE v.status = 'pending' AND u.role = 'student'
+          ORDER BY v."createdAt" DESC
+        `
+      );
+      
+      return verifications.map((v: any) => ({
+        id: v.id,
+        userId: v.userId,
+        idCardImage: v.idCardImage,
+        faceImage: v.faceImage,
+        status: v.status,
+        matchScore: v.matchScore,
+        faceMatchScore: v.faceMatchScore,
+        collegeMatch: v.collegeMatch,
+        analysisRemarks: v.analysisRemarks,
+        createdAt: v.createdAt,
+        courseMatch: null,
+        courseDetected: null,
+        idCardText: null,
+        user: {
+          id: v.user_id,
+          name: v.user_name,
+          email: v.user_email,
+          phone: v.user_phone,
+          batch: v.user_batch,
+          collegeId: v.user_collegeId,
+          courseId: null,
+          college: v.college_id ? {
+            id: v.college_id,
+            name: v.college_name,
+          } : null,
+          course: null,
+        },
+      }));
+    } catch (fallbackError: any) {
+      console.error("Fallback query also failed:", fallbackError);
+      throw new Error("Failed to fetch pending verifications");
+    }
   }
 };
 
