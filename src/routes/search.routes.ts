@@ -14,3 +14,4 @@ router.get("/", validate(searchSchema), searchHandler);
 
 export default router;
 
+

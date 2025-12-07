@@ -76,8 +76,17 @@ export const getVerificationStatusHandler = async (
       success: true,
       data: verification,
     });
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    console.error("Error in getVerificationStatusHandler:", error);
+    console.error("Error stack:", error?.stack);
+    console.error("Error message:", error?.message);
+    if (error instanceof Error) {
+      const appError: AppError = error;
+      appError.statusCode = appError.statusCode || 500;
+      next(appError);
+    } else {
+      next(error);
+    }
   }
 };
 

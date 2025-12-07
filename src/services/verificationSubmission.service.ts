@@ -377,20 +377,75 @@ export const getVerificationStatus = async (userId: string) => {
 
   const user = userResult[0];
 
-  // Get latest verification - try with new columns first, fallback to basic query
+  // Get latest verification using raw SQL to handle missing columns gracefully
+  // Check if new columns exist first, then query accordingly
   let latestVerification: any = null;
   
   try {
-    // Try to get verification with all columns (including new course fields)
-    const verifications = await prisma.verification.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 1,
-    });
-    latestVerification = verifications[0] || null;
-  } catch (error: any) {
-    // If query fails (columns don't exist), use raw query with only existing columns
-    if (error.message?.includes("does not exist") || error.message?.includes("column")) {
+    // First, check if the new columns exist by querying information_schema
+    const columnCheck = await prisma.$queryRaw<Array<{ column_name: string }>>(
+      Prisma.sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'Verification' 
+        AND column_name IN ('courseMatch', 'courseDetected', 'idCardText')
+        LIMIT 3
+      `
+    );
+    
+    const hasNewColumns = columnCheck.length > 0;
+    
+    if (hasNewColumns) {
+      // New columns exist - use full query
+      const verifications = await prisma.$queryRaw<Array<{
+        id: string;
+        userId: string;
+        idCardImage: string;
+        faceImage: string;
+        status: string;
+        reviewedBy: string | null;
+        matchScore: number | null;
+        faceMatchScore: number | null;
+        collegeMatch: boolean | null;
+        courseMatch: boolean | null;
+        courseDetected: string | null;
+        idCardText: string | null;
+        analysisRemarks: string | null;
+        rejectedAt: Date | null;
+        createdAt: Date;
+      }>>(
+        Prisma.sql`
+          SELECT 
+            id, "userId", "idCardImage", "faceImage", status, "reviewedBy",
+            "matchScore", "faceMatchScore", "collegeMatch",
+            "courseMatch", "courseDetected", "idCardText",
+            "analysisRemarks", "rejectedAt", "createdAt"
+          FROM "Verification"
+          WHERE "userId" = ${userId}
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `
+      );
+      
+      latestVerification = verifications[0] ? {
+        id: verifications[0].id,
+        userId: verifications[0].userId,
+        idCardImage: verifications[0].idCardImage,
+        faceImage: verifications[0].faceImage,
+        status: verifications[0].status as any,
+        reviewedBy: verifications[0].reviewedBy,
+        matchScore: verifications[0].matchScore,
+        faceMatchScore: verifications[0].faceMatchScore,
+        collegeMatch: verifications[0].collegeMatch,
+        courseMatch: verifications[0].courseMatch,
+        courseDetected: verifications[0].courseDetected,
+        idCardText: verifications[0].idCardText,
+        analysisRemarks: verifications[0].analysisRemarks,
+        rejectedAt: verifications[0].rejectedAt,
+        createdAt: verifications[0].createdAt,
+      } : null;
+    } else {
+      // New columns don't exist - use basic query
       const verifications = await prisma.$queryRaw<Array<{
         id: string;
         userId: string;
@@ -434,8 +489,38 @@ export const getVerificationStatus = async (userId: string) => {
         rejectedAt: verifications[0].rejectedAt,
         createdAt: verifications[0].createdAt,
       } : null;
-    } else {
-      throw error;
+    }
+  } catch (error: any) {
+    // If even the column check fails, log and use minimal query
+    console.error("Error checking verification columns:", error);
+    try {
+      const verifications = await prisma.$queryRaw<Array<{
+        id: string;
+        userId: string;
+        status: string;
+        createdAt: Date;
+      }>>(
+        Prisma.sql`
+          SELECT id, "userId", status, "createdAt"
+          FROM "Verification"
+          WHERE "userId" = ${userId}
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `
+      );
+      
+      latestVerification = verifications[0] ? {
+        id: verifications[0].id,
+        userId: verifications[0].userId,
+        status: verifications[0].status as any,
+        createdAt: verifications[0].createdAt,
+        courseMatch: null,
+        courseDetected: null,
+        idCardText: null,
+      } : null;
+    } catch (fallbackError: any) {
+      console.error("Fallback query also failed:", fallbackError);
+      latestVerification = null;
     }
   }
 

@@ -11,3 +11,4 @@ export const searchSchema = z.object({
 
 export type SearchInput = z.infer<typeof searchSchema>["query"];
 
+

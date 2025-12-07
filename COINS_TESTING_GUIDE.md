@@ -289,3 +289,4 @@ SELECT id, name, email, coins FROM "User";
 5. Add coin expiration/redemption features
 
 
+

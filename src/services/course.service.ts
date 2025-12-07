@@ -33,3 +33,4 @@ export const createCourse = async (data: { name: string; code?: string; collegeI
   return course;
 };
 
+
