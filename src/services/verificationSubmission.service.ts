@@ -350,32 +350,120 @@ export const submitVerification = async (
 };
 
 export const getVerificationStatus = async (userId: string) => {
-  // Use raw query to handle potential schema mismatches
-  const userResult = await prisma.$queryRaw<Array<{
+  // Check which columns exist in User table first
+  let user: {
     id: string;
-    emailVerified: boolean | null;
-    phoneVerified: boolean | null;
+    emailVerified: boolean;
+    phoneVerified: boolean;
     verifiedStatus: string | null;
-    bypassVerified: boolean | null;
-  }>>(
-    Prisma.sql`
-      SELECT 
-        id,
-        COALESCE("emailVerified", false) as "emailVerified",
-        COALESCE("phoneVerified", false) as "phoneVerified",
-        "verifiedStatus",
-        COALESCE("bypassVerified", false) as "bypassVerified"
-      FROM "User"
-      WHERE id = ${userId}
-      LIMIT 1
-    `
-  );
+    bypassVerified: boolean;
+  };
 
-  if (!userResult || userResult.length === 0) {
-    throw new Error("User not found");
+  try {
+    // Check if new columns exist
+    const userColumns = await prisma.$queryRaw<Array<{ column_name: string }>>(
+      Prisma.sql`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'User' 
+        AND column_name IN ('emailVerified', 'phoneVerified', 'bypassVerified')
+        LIMIT 3
+      `
+    );
+    
+    const hasEmailVerified = userColumns.some(c => c.column_name === 'emailVerified');
+    const hasPhoneVerified = userColumns.some(c => c.column_name === 'phoneVerified');
+    const hasBypassVerified = userColumns.some(c => c.column_name === 'bypassVerified');
+    
+    // Build query based on available columns
+    if (hasEmailVerified && hasPhoneVerified && hasBypassVerified) {
+      const userResult = await prisma.$queryRaw<Array<{
+        id: string;
+        emailVerified: boolean | null;
+        phoneVerified: boolean | null;
+        verifiedStatus: string | null;
+        bypassVerified: boolean | null;
+      }>>(
+        Prisma.sql`
+          SELECT 
+            id,
+            COALESCE("emailVerified", false) as "emailVerified",
+            COALESCE("phoneVerified", false) as "phoneVerified",
+            "verifiedStatus",
+            COALESCE("bypassVerified", false) as "bypassVerified"
+          FROM "User"
+          WHERE id = ${userId}
+          LIMIT 1
+        `
+      );
+      
+      if (!userResult || userResult.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      user = {
+        id: userResult[0].id,
+        emailVerified: userResult[0].emailVerified || false,
+        phoneVerified: userResult[0].phoneVerified || false,
+        verifiedStatus: userResult[0].verifiedStatus,
+        bypassVerified: userResult[0].bypassVerified || false,
+      };
+    } else {
+      // Fallback: only get basic fields
+      const userResult = await prisma.$queryRaw<Array<{
+        id: string;
+        verifiedStatus: string | null;
+      }>>(
+        Prisma.sql`
+          SELECT 
+            id,
+            "verifiedStatus"
+          FROM "User"
+          WHERE id = ${userId}
+          LIMIT 1
+        `
+      );
+      
+      if (!userResult || userResult.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      user = {
+        id: userResult[0].id,
+        emailVerified: false,
+        phoneVerified: false,
+        verifiedStatus: userResult[0].verifiedStatus,
+        bypassVerified: false,
+      };
+    }
+  } catch (error: any) {
+    // Ultimate fallback - use Prisma's basic query
+    console.error("Error querying user with raw SQL, trying Prisma query:", error);
+    try {
+      const userData = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          verifiedStatus: true,
+        },
+      });
+      
+      if (!userData) {
+        throw new Error("User not found");
+      }
+      
+      user = {
+        id: userData.id,
+        emailVerified: false,
+        phoneVerified: false,
+        verifiedStatus: userData.verifiedStatus,
+        bypassVerified: false,
+      };
+    } catch (fallbackError: any) {
+      console.error("Fallback query also failed:", fallbackError);
+      throw new Error("Failed to fetch user data");
+    }
   }
-
-  const user = userResult[0];
 
   // Get latest verification using raw SQL to handle missing columns gracefully
   // Check if new columns exist first, then query accordingly
